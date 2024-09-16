@@ -239,6 +239,12 @@ h1 {
   background: transparent;
 }
 
+#word-definition {
+  margin-top: 20px;
+  font-size: 1.1rem;
+  color: #FFFFFF;
+}
+
 #share-button,
 #close-winning-modal {
   background-color: #3A3A3C;

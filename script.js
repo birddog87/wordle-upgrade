@@ -44,7 +44,7 @@ async function startGame(mode) {
 
   getPlayerName();
 
-  // Set word length based on mode
+  // Set word length and target word based on mode
   if (mode === 'daily') {
     wordLength = 5;
     targetWord = 'apple'; // For demonstration, use a fixed word
@@ -360,6 +360,18 @@ function showWinningAnimation() {
   const winningModal = document.getElementById('winning-modal');
   winningModal.style.display = 'block';
 
+  // Fetch and display the word's definition
+  fetchWordDefinition(targetWord)
+    .then(definition => {
+      const definitionDiv = document.getElementById('word-definition');
+      definitionDiv.innerHTML = `<strong>Definition:</strong> ${definition}`;
+    })
+    .catch(error => {
+      const definitionDiv = document.getElementById('word-definition');
+      definitionDiv.innerHTML = `<strong>Definition:</strong> Not found.`;
+      console.error('Error fetching definition:', error);
+    });
+
   // Confetti animation using canvas
   const canvas = document.getElementById('confetti-canvas');
   const ctx = canvas.getContext('2d');
@@ -406,6 +418,23 @@ function showWinningAnimation() {
   }
 
   drawConfetti();
+}
+
+// Function to fetch word definition from dictionary API
+async function fetchWordDefinition(word) {
+  try {
+    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+    if (!response.ok) {
+      throw new Error('Definition not found');
+    }
+    const data = await response.json();
+    // Extract the first definition from the first meaning
+    const definition = data[0].meanings[0].definitions[0].definition;
+    return definition;
+  } catch (error) {
+    console.error('Error fetching word definition:', error);
+    throw error;
+  }
 }
 
 // Event listeners for mode selection
