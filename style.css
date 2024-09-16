@@ -98,6 +98,22 @@ h1 {
   animation: flip 0.5s;
 }
 
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-10px);
+  }
+  40%, 80% {
+    transform: translateX(10px);
+  }
+}
+
+.invalid {
+  animation: shake 0.5s;
+}
+
 /* Keyboard */
 #keyboard {
   margin: 20px auto;
@@ -223,7 +239,8 @@ h1 {
   background: transparent;
 }
 
-#share-button, #close-winning-modal {
+#share-button,
+#close-winning-modal {
   background-color: #3A3A3C;
   color: #FFFFFF;
   border: none;
@@ -235,7 +252,8 @@ h1 {
   transition: background-color 0.3s;
 }
 
-#share-button:hover, #close-winning-modal:hover {
+#share-button:hover,
+#close-winning-modal:hover {
   background-color: #5A5A5C;
 }
 

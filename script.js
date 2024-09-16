@@ -1,4 +1,4 @@
-// Initialize Firebase (Replace with your Firebase project's configuration)
+// Initialize Firebase (Using your Firebase project's configuration)
 var firebaseConfig = {
   apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs",
   authDomain: "wordle-upgrade-c055f.firebaseapp.com",
@@ -19,18 +19,24 @@ let wordLength = 5;
 let gameActive = false;
 let startTime;
 let playerName = '';
+let validWordsSet = new Set();
 
-// Word lists
-const fiveLetterWords = ['apple', 'brave', 'crane', 'drive', 'eagle', 'fable', 'gamer', 'happy'];
-const sixLetterWords = ['animal', 'banana', 'camera', 'dragon', 'energy', 'forest', 'galaxy', 'harbor'];
-
-// Comprehensive word list for validation
-let validWords = [];
-// For this example, we'll combine both word lists
-validWords = [...fiveLetterWords, ...sixLetterWords];
+// Function to load the word list
+async function loadWordList() {
+  try {
+    const response = await fetch('words.txt');
+    const text = await response.text();
+    const wordsArray = text.split('\n').map(word => word.trim().toLowerCase());
+    validWordsSet = new Set(wordsArray);
+    console.log('Word list loaded');
+  } catch (error) {
+    console.error('Error loading word list:', error);
+  }
+}
 
 // Function to start the game
-function startGame(mode) {
+async function startGame(mode) {
+  await loadWordList();
   gameActive = true;
   currentGuess = '';
   guesses = [];
@@ -43,10 +49,12 @@ function startGame(mode) {
     wordLength = 5;
   } else if (mode === 'random') {
     wordLength = 5;
-    targetWord = fiveLetterWords[Math.floor(Math.random() * fiveLetterWords.length)];
+    const wordArray = Array.from(validWordsSet).filter(word => word.length === 5);
+    targetWord = wordArray[Math.floor(Math.random() * wordArray.length)];
   } else if (mode === 'six-letter') {
     wordLength = 6;
-    targetWord = sixLetterWords[Math.floor(Math.random() * sixLetterWords.length)];
+    const wordArray = Array.from(validWordsSet).filter(word => word.length === 6);
+    targetWord = wordArray[Math.floor(Math.random() * wordArray.length)];
   }
 
   maxGuesses = 6;
@@ -158,10 +166,10 @@ function handleKeyPress(key) {
 
   if (key === 'Enter') {
     if (currentGuess.length === wordLength) {
-      if (validWords.includes(currentGuess)) {
+      if (validWordsSet.has(currentGuess)) {
         submitGuess();
       } else {
-        alert('Not a valid word.');
+        showInvalidGuess();
       }
     }
   } else if (key === 'Backspace') {
@@ -202,6 +210,19 @@ function updateBoard() {
     const tile = tiles[rowStart + i];
     const tileText = tile.querySelector('span');
     tileText.textContent = currentGuess[i] ? currentGuess[i].toUpperCase() : '';
+    tile.classList.remove('invalid');
+  }
+}
+
+// Function to show invalid guess animation
+function showInvalidGuess() {
+  const gameBoard = document.getElementById('game-board');
+  const tiles = gameBoard.querySelectorAll('.tile');
+  const rowStart = guesses.length * wordLength;
+
+  for (let i = 0; i < wordLength; i++) {
+    const tile = tiles[rowStart + i];
+    tile.classList.add('invalid');
   }
 }
 
