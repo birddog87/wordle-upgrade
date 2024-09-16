@@ -255,20 +255,31 @@ function submitGuess() {
 
     const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
 
+    // Check for exact match (green)
     if (guessArray[i] === targetArray[i]) {
       tile.classList.add('correct');
       keyButton.classList.remove('key-present');
       keyButton.classList.add('key-correct');
-      remainingLetters[i] = null;
-    } else if (remainingLetters.includes(guessArray[i])) {
-      tile.classList.add('present');
-      if (!keyButton.classList.contains('key-correct')) {
-        keyButton.classList.add('key-present');
+      remainingLetters[i] = null; // Remove the letter from the remaining pool
+    }
+  }
+
+  // Second pass: check for letters that are in the word but in the wrong place (yellow)
+  for (let i = 0; i < wordLength; i++) {
+    const tile = tiles[rowStart + i];
+    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
+
+    if (!tile.classList.contains('correct')) {
+      if (remainingLetters.includes(guessArray[i])) {
+        tile.classList.add('present');
+        if (!keyButton.classList.contains('key-correct')) {
+          keyButton.classList.add('key-present');
+        }
+        remainingLetters[remainingLetters.indexOf(guessArray[i])] = null; // Remove the letter
+      } else {
+        tile.classList.add('absent');
+        keyButton.classList.add('key-absent'); // Mark the key as absent if not in the word
       }
-      remainingLetters[remainingLetters.indexOf(guessArray[i])] = null;
-    } else {
-      tile.classList.add('absent');
-      keyButton.classList.add('key-absent');
     }
   }
 
@@ -291,6 +302,7 @@ function submitGuess() {
 
   currentGuess = '';
 }
+
 
 // Function to log the result
 function logResult(won) {

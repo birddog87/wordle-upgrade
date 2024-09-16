@@ -148,15 +148,15 @@ h1 {
 }
 
 .key-correct {
-  background-color: #538D4E !important;
+  background-color: #538D4E !important; /* Green */
 }
 
 .key-present {
-  background-color: #B59F3B !important;
+  background-color: #B59F3B !important; /* Yellow */
 }
 
 .key-absent {
-  background-color: #3A3A3C !important;
+  background-color: #3A3A3C !important; /* Grey */
 }
 
 /* Modal Styles */
