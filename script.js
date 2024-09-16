@@ -1,4 +1,4 @@
-// Firebase configuration
+// Initialize Firebase (Replace with your Firebase project's configuration)
 var firebaseConfig = {
   apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs",
   authDomain: "wordle-upgrade-c055f.firebaseapp.com",
@@ -26,8 +26,6 @@ const sixLetterWords = ['animal', 'banana', 'camera', 'dragon', 'energy', 'fores
 
 // Comprehensive word list for validation
 let validWords = [];
-
-// Load valid words from an external source or define them here
 // For this example, we'll combine both word lists
 validWords = [...fiveLetterWords, ...sixLetterWords];
 
@@ -56,7 +54,7 @@ function startGame(mode) {
   createKeyboard();
 }
 
-// Function to get player name from cookie or prompt
+// Function to get player name from localStorage or prompt
 function getPlayerName() {
   playerName = localStorage.getItem('playerName') || '';
   if (!playerName) {
@@ -93,8 +91,8 @@ document.getElementById('leaderboard-modal-close').onclick = function () {
   leaderboardModal.style.display = 'none';
 };
 
-// Close winning modal when clicked
-document.getElementById('winning-modal').onclick = function () {
+// Close winning modal when 'Close' button is clicked
+document.getElementById('close-winning-modal').onclick = function () {
   const winningModal = document.getElementById('winning-modal');
   winningModal.style.display = 'none';
 };
@@ -135,23 +133,23 @@ function createKeyboard() {
     keyboard.appendChild(rowDiv);
   });
 
-  // Add Enter and Backspace keys
-  const bottomRow = document.createElement('div');
-  bottomRow.classList.add('keyboard-row');
+  // Add Enter and Backspace keys to the last row
+  const lastRow = document.createElement('div');
+  lastRow.classList.add('keyboard-row');
 
   const enterButton = document.createElement('button');
   enterButton.textContent = 'Enter';
   enterButton.classList.add('wide-button');
   enterButton.addEventListener('click', () => handleKeyPress('Enter'));
-  bottomRow.appendChild(enterButton);
+  lastRow.appendChild(enterButton);
 
   const backspaceButton = document.createElement('button');
   backspaceButton.textContent = '←';
   backspaceButton.classList.add('wide-button');
   backspaceButton.addEventListener('click', () => handleKeyPress('Backspace'));
-  bottomRow.appendChild(backspaceButton);
+  lastRow.appendChild(backspaceButton);
 
-  keyboard.appendChild(bottomRow);
+  keyboard.appendChild(lastRow);
 }
 
 // Function to handle key presses
@@ -180,6 +178,10 @@ function handleKeyPress(key) {
 // Enable keyboard input on desktop
 document.addEventListener('keydown', (event) => {
   if (!gameActive) return;
+
+  // Do not handle key presses if an input field is focused
+  if (document.activeElement.tagName === 'INPUT') return;
+
   let key = event.key;
   if (key === 'Enter') {
     handleKeyPress('Enter');
@@ -246,7 +248,6 @@ function submitGuess() {
     setTimeout(() => {
       showWinningAnimation();
       logResult(true);
-      shareResult();
     }, 500);
   } else if (guesses.length === maxGuesses) {
     gameActive = false;
@@ -322,7 +323,7 @@ function viewLeaderboard() {
   });
 }
 
-// Function to show winning animation
+// Function to show winning animation and options
 function showWinningAnimation() {
   const winningModal = document.getElementById('winning-modal');
   winningModal.style.display = 'block';
@@ -330,8 +331,8 @@ function showWinningAnimation() {
   // Confetti animation using canvas
   const canvas = document.getElementById('confetti-canvas');
   const ctx = canvas.getContext('2d');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
 
   // Confetti particles
   const confetti = [];
@@ -379,10 +380,10 @@ function showWinningAnimation() {
 document.getElementById('daily-mode').addEventListener('click', () => startGame('daily'));
 document.getElementById('random-mode').addEventListener('click', () => startGame('random'));
 document.getElementById('six-letter-mode').addEventListener('click', () => startGame('six-letter'));
-document.getElementById('share-button').addEventListener('click', shareResult);
+document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
 
-// Hide share button initially
-document.getElementById('share-button').style.display = 'none';
+// Event listeners for share and close buttons in the winning modal
+document.getElementById('share-button').addEventListener('click', shareResult);
 
 // Initialize the game
 startGame('daily');
