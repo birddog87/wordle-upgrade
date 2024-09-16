@@ -110,7 +110,7 @@ h1 {
   }
 }
 
-.invalid {
+.tile.invalid {
   animation: shake 0.5s;
 }
 

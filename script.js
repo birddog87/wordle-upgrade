@@ -44,22 +44,33 @@ async function startGame(mode) {
 
   getPlayerName();
 
+  // Set word length based on mode
   if (mode === 'daily') {
-    targetWord = 'apple';
     wordLength = 5;
+    targetWord = 'apple'; // For demonstration, use a fixed word
   } else if (mode === 'random') {
     wordLength = 5;
-    const wordArray = Array.from(validWordsSet).filter(word => word.length === 5);
+    const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
     targetWord = wordArray[Math.floor(Math.random() * wordArray.length)];
   } else if (mode === 'six-letter') {
     wordLength = 6;
-    const wordArray = Array.from(validWordsSet).filter(word => word.length === 6);
+    const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
     targetWord = wordArray[Math.floor(Math.random() * wordArray.length)];
   }
 
   maxGuesses = 6;
+
+  // Reset the game board and keyboard
+  const gameBoard = document.getElementById('game-board');
+  gameBoard.innerHTML = '';
   createBoard();
+
+  const keyboard = document.getElementById('keyboard');
+  keyboard.innerHTML = '';
   createKeyboard();
+
+  // Update game board grid to match word length
+  gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
 }
 
 // Function to get player name from localStorage or prompt
@@ -166,7 +177,7 @@ function handleKeyPress(key) {
 
   if (key === 'Enter') {
     if (currentGuess.length === wordLength) {
-      if (validWordsSet.has(currentGuess)) {
+      if (validWordsSet.has(currentGuess.toLowerCase())) {
         submitGuess();
       } else {
         showInvalidGuess();
