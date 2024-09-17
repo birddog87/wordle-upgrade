@@ -238,7 +238,6 @@ function showInvalidGuess() {
 }
 
 // Function to submit a guess
-// Function to submit a guess
 function submitGuess() {
   const gameBoard = document.getElementById('game-board');
   const tiles = gameBoard.querySelectorAll('.tile');
@@ -248,39 +247,38 @@ function submitGuess() {
 
   let remainingLetters = targetArray.slice();
 
-  // First pass: Mark correct letters (green)
+  // Mark each tile
   for (let i = 0; i < wordLength; i++) {
     const tile = tiles[rowStart + i];
-    const letter = guessArray[i].toUpperCase();
-    const keyButton = document.getElementById('key-' + letter);
+    const tileText = tile.querySelector('span');
+    tile.classList.add('flip');
 
+    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
+
+    // Check for exact match (green)
     if (guessArray[i] === targetArray[i]) {
       tile.classList.add('correct');
-      keyButton.classList.remove('key-present', 'key-absent');
+      keyButton.classList.remove('key-present');
       keyButton.classList.add('key-correct');
-      remainingLetters[i] = null;
+      remainingLetters[i] = null; // Remove the letter from the remaining pool
     }
   }
 
-  // Second pass: Mark present letters (yellow) and absent letters (grey)
+  // Second pass: check for letters that are in the word but in the wrong place (yellow)
   for (let i = 0; i < wordLength; i++) {
     const tile = tiles[rowStart + i];
-    const letter = guessArray[i].toUpperCase();
-    const keyButton = document.getElementById('key-' + letter);
+    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
 
     if (!tile.classList.contains('correct')) {
       if (remainingLetters.includes(guessArray[i])) {
         tile.classList.add('present');
         if (!keyButton.classList.contains('key-correct')) {
-          keyButton.classList.remove('key-absent');
           keyButton.classList.add('key-present');
         }
-        remainingLetters[remainingLetters.indexOf(guessArray[i])] = null;
+        remainingLetters[remainingLetters.indexOf(guessArray[i])] = null; // Remove the letter
       } else {
         tile.classList.add('absent');
-        if (!keyButton.classList.contains('key-correct') && !keyButton.classList.contains('key-present')) {
-          keyButton.classList.add('key-absent');
-        }
+        keyButton.classList.add('key-absent'); // Mark the key as absent if not in the word
       }
     }
   }
