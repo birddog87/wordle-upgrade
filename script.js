@@ -1,476 +1,493 @@
-<?php
+// Initialize Firebase (Using your Firebase project's configuration)
+var firebaseConfig = {
+  apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs",
+  authDomain: "wordle-upgrade-c055f.firebaseapp.com",
+  databaseURL: "https://wordle-upgrade-c055f-default-rtdb.firebaseio.com",
+  projectId: "wordle-upgrade-c055f",
+  appId: "1:683362789332:web:96a84b1ffae380e5e85841",
+};
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
 
-namespace HM\BackUpWordPress;
+// Variables to store game state
+let targetWord = '';
+let currentGuess = '';
+let guesses = [];
+let maxGuesses = 6;
+let wordLength = 5;
+let gameActive = false;
+let startTime;
+let playerName = '';
+let validWordsSet = new Set();
+let currentMode = 'daily'; // Track current game mode
 
-/**
- * Manages both the backup path and site root
- *
- * Handles calculating & protecting the directory that backups will be stored in
- * as well as the directory that is being backed up
- */
-class Path {
+// Load word list
+async function loadWordList() {
+  try {
+    const response = await fetch('words.txt');
+    const text = await response.text();
+    const wordsArray = text.split('\n').map(word => word.trim().toLowerCase());
+    validWordsSet = new Set(wordsArray);
+    console.log('Word list loaded');
+  } catch (error) {
+    console.error('Error loading word list:', error);
+  }
+}
 
-  /**
-   * The path to the directory that backup files are stored in
-   *
-   * @var string $this->path
-   */
-  private $path;
+// Start the game based on mode
+async function startGame(mode) {
+  await loadWordList();
+  gameActive = true;
+  currentGuess = '';
+  guesses = [];
+  startTime = new Date();
+  currentMode = mode;
 
-  /**
-   * The path to the directory that will be backed up
-   *
-   * @var string $this->root
-   */
-  private $root;
+  getPlayerName();
 
-  /**
-   * The path to the directory that backup files are stored in
-   *
-   * @var string $this->path
-   */
-  private $custom_path;
+  // Set word length and target word based on mode
+  if (mode === 'daily') {
+    wordLength = 5;
+    const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
 
-  /**
-   * Contains the instantiated Path instance
-   *
-   * @var Path $this->instance
-   */
-  private static $instance;
-
-  /**
-   * Protected constructor to prevent creating a new instance of the
-   * *Singleton* via the `new` operator from outside of this class.
-   */
-  protected function __construct() {}
-
-  /**
-   * Prevent cloning of the instance of the *Singleton* instance.
-   */
-  public function __clone() { throw new \Exception('may not be cloned'); }
-
-  /**
-   * Prevent unserializing of the *Singleton* instance.
-   */
-  public function __wakeup() { throw new \Exception('may not be serialized'); }
-
-  /**
-   * Returns the *Singleton* instance of this class.
-   *
-   * @staticvar Path $instance The *Singleton* instances of this class.
-   *
-   * @return Path The *Singleton* instance.
-   */
-  public static function get_instance() {
-
-    if ( ! ( self::$instance instanceof Path ) ) {
-      self::$instance = new Path();
-    }
-
-    return self::$instance;
+    // Use date as seed to select word
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const index = seed % wordArray.length;
+    targetWord = wordArray[index];
+  } else if (mode === 'random') {
+    wordLength = 5;
+    const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
+    targetWord = wordArray[Math.floor(Math.random() * wordArray.length)];
+  } else if (mode === 'six-letter') {
+    wordLength = 6;
+    const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
+    targetWord = wordArray[Math.floor(Math.random() * wordArray.length)];
   }
 
-  /**
-   * Convenience method for quickly grabbing the path
-   */
-  public static function get_path() {
-    return self::get_instance()->get_calculated_path();
+  maxGuesses = 6;
+
+  // Reset the game board and keyboard
+  const gameBoard = document.getElementById('game-board');
+  gameBoard.innerHTML = '';
+  createBoard();
+
+  const keyboard = document.getElementById('keyboard');
+  keyboard.innerHTML = '';
+  createKeyboard();
+
+  // Update game board grid to match word length
+  gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
+}
+
+// Get player's name from localStorage
+function getPlayerName() {
+  playerName = localStorage.getItem('playerName') || '';
+  if (!playerName) {
+    showNameModal();
   }
+}
 
-  /**
-   * Convenience method for quickly grabbing the root
-   */
-  public static function get_root() {
-    return self::get_instance()->get_calculated_root();
-  }
+// Show name entry modal
+function showNameModal() {
+  const nameModal = document.getElementById('name-modal');
+  nameModal.style.display = 'block';
 
-  /**
-   * Calculate the path to the site "home" directory.
-   *
-   * The home directory is the path equivalent to the home_url. That is,
-   * the path to the true root of the website. In situations where WordPress is
-   * installed in a subdirectory the home path is different to ABSPATH
-   *
-   * @param string $site_path The site_path to use when calculating the home path, defaults to ABSPATH
-   */
-  public static function get_home_path( $site_path = ABSPATH ) {
-
-    if ( defined( 'HMBKP_ROOT' ) && HMBKP_ROOT ) {
-      return wp_normalize_path( HMBKP_ROOT );
-    }
-
-    $home_path = wp_normalize_path( $site_path );
-
-    if ( path_in_php_open_basedir( dirname( $site_path ) ) ) {
-
-      $home    = set_url_scheme( get_option( 'home' ), 'http' );
-      $siteurl = set_url_scheme( get_option( 'siteurl' ), 'http' );
-      if ( ! empty( $home ) && 0 !== strcasecmp( $home, $siteurl ) ) {
-        $wp_path_rel_to_home = str_ireplace( $home, '', $siteurl ); /* $siteurl - $home */
-        $pos = strripos( wp_normalize_path( $_SERVER['SCRIPT_FILENAME'] ), trailingslashit( $wp_path_rel_to_home ) );
-        $home_path = substr( wp_normalize_path( $_SERVER['SCRIPT_FILENAME'] ), 0, $pos );
-        $home_path = trailingslashit( $home_path );
-      }
-
-      if ( is_multisite() ) {
-        $slashed_home      = trailingslashit( get_option( 'home' ) );
-        $base              = parse_url( $slashed_home, PHP_URL_PATH );
-        $document_root_fix = wp_normalize_path( realpath( $_SERVER['DOCUMENT_ROOT'] ) );
-        $abspath_fix       = wp_normalize_path( ABSPATH );
-        $home_path         = strpos( $abspath_fix, $document_root_fix ) === 0 ? $document_root_fix . $base : $home_path;
-      }
-    }
-
-    return wp_normalize_path( untrailingslashit( $home_path ) );
-
-  }
-
-  /**
-   * get the calculated path to the directory where backups will be stored
-   */
-  private function get_calculated_path() {
-
-    // Calculate the path if needed
-    if ( empty( $this->path ) || ! wp_is_writable( $this->path ) ) {
-      $this->calculate_path();
-    }
-
-    // Ensure the backup directory is protected
-    $this->protect_path();
-
-    return wp_normalize_path( $this->path );
-
-  }
-
-  /**
-   * Set the path directly, overriding the default
-   *
-   * @param $path
-   */
-  public function set_path( $path ) {
-
-    $this->custom_path = $path;
-
-    // Re-calculate the backup path
-    $this->calculate_path();
-
-  }
-
-  /**
-   * get the calculated path to the directory that will be backed up
-   */
-  private function get_calculated_root() {
-
-    $root = self::get_home_path();
-
-    if ( defined( 'HMBKP_ROOT' ) && HMBKP_ROOT ) {
-      $root = HMBKP_ROOT;
-    }
-
-    if ( $this->root ) {
-      $root = $this->root;
-    }
-
-    return wp_normalize_path( $root );
-
-  }
-
-  /**
-   * Set the root path directly, overriding the default
-   *
-   * @param $root
-   */
-  public function set_root( $root ) {
-    $this->root = $root;
-  }
-
-  public function reset_path() {
-    $this->path = $this->custom_path = '';
-  }
-
-  /**
-   * Get the path to the default backup location in wp-content
-   */
-  public function get_default_path() {
-    return trailingslashit( wp_normalize_path( WP_CONTENT_DIR ) ) . 'backupwordpress-' . substr( HMBKP_SECURE_KEY, 0, 10 ) . '-backups';
-  }
-
-  /**
-   * Get the path to the fallback backup location in uploads
-   */
-  public function get_fallback_path() {
-
-    $upload_dir = wp_upload_dir();
-
-    return trailingslashit( wp_normalize_path( $upload_dir['basedir'] ) ) . 'backupwordpress-' . substr( HMBKP_SECURE_KEY, 0, 10 ) . '-backups';
-
-  }
-
-  /**
-   * Get the path to the custom backup location if it's been set
-   */
-  public function get_custom_path() {
-
-    if ( $this->custom_path ) {
-      return $this->custom_path;
-    }
-
-    if ( defined( 'HMBKP_PATH' ) && wp_is_writable( HMBKP_PATH ) ) {
-      return HMBKP_PATH;
-    }
-
-    return '';
-
-  }
-
-  /**
-   * Builds an array containing existing backups folders.
-   *
-   * @return array
-   */
-  public function get_existing_paths() {
-
-    if ( false === $default = glob( WP_CONTENT_DIR . '/backupwordpress-*-backups', GLOB_ONLYDIR ) ) {
-      $default = array();
-    }
-
-    $upload_dir = wp_upload_dir();
-
-    if ( false === $fallback = glob( $upload_dir['basedir'] . '/backupwordpress-*-backups', GLOB_ONLYDIR ) ) {
-      $fallback = array();
-    }
-
-    $paths = array_merge( $default, $fallback );
-    $paths = array_map( 'wp_normalize_path', $paths );
-
-    return $paths;
-
-  }
-
-  /**
-   * Returns the first existing path if there is one
-   *
-   * @return string Backup path if found empty string if not
-   */
-  public function get_existing_path() {
-
-    $paths = $this->get_existing_paths();
-
-    if ( ! empty( $paths[0] ) ) {
-      return $paths[0];
-    }
-
-    return '';
-
-  }
-
-  /**
-   * Calculate the backup path and create the directory if it doesn't exist.
-   *
-   * Tries all possible locations and uses the first one possible.
-   *
-   * @return
-   */
-  public function calculate_path() {
-
-    $paths = $this->get_possible_paths();
-
-    // Loop through possible paths, use the first one that exists/can be created and is writable.
-    foreach ( $paths as $path ) {
-      // Also handles fixing perms / directory already exists.
-      if ( wp_mkdir_p( $path ) && wp_is_writable( $path ) ) {
-        break;
-      }
-    }
-
-    /**
-     * If we managed to create a writable path then use that,
-     * otherwise just return the unwritable path.
-     */
-    if ( file_exists( $path ) && wp_is_writable( $path ) ) {
-      $this->path = $path;
+  document.getElementById('save-name-button').onclick = function () {
+    const nameInput = document.getElementById('player-name-input');
+    if (nameInput.value.trim()) {
+      playerName = nameInput.value.trim();
+      localStorage.setItem('playerName', playerName);
+      nameModal.style.display = 'none';
     } else {
-      $this->path = reset( $paths );
+      alert('Please enter your name.');
     }
+  };
+}
+
+// Close modals
+document.getElementById('name-modal-close').onclick = function () {
+  const nameModal = document.getElementById('name-modal');
+  nameModal.style.display = 'none';
+};
+
+document.getElementById('leaderboard-modal-close').onclick = function () {
+  const leaderboardModal = document.getElementById('leaderboard-modal');
+  leaderboardModal.style.display = 'none';
+};
+
+document.getElementById('close-winning-modal').onclick = function () {
+  const winningModal = document.getElementById('winning-modal');
+  winningModal.style.display = 'none';
+};
+
+// Create game board
+function createBoard() {
+  const gameBoard = document.getElementById('game-board');
+  gameBoard.innerHTML = '';
+  gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
+
+  for (let i = 0; i < maxGuesses * wordLength; i++) {
+    const tile = document.createElement('div');
+    tile.classList.add('tile');
+    const tileText = document.createElement('span');
+    tile.appendChild(tileText);
+    gameBoard.appendChild(tile);
   }
+}
 
-  public function get_possible_paths() {
+// Create keyboard
+function createKeyboard() {
+  const keyboard = document.getElementById('keyboard');
+  keyboard.innerHTML = '';
 
-    $paths = array();
+  const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+  rows.forEach((row) => {
+    const rowDiv = document.createElement('div');
+    rowDiv.classList.add('keyboard-row');
+    row.split('').forEach((key) => {
+      const button = document.createElement('button');
+      button.textContent = key;
+      button.id = 'key-' + key;
+      button.addEventListener('click', () => handleKeyPress(key));
+      rowDiv.appendChild(button);
+    });
+    keyboard.appendChild(rowDiv);
+  });
 
-    // If we have a custom path then try to use it.
-    if ( $this->get_custom_path() ) {
-      $paths[] = $this->get_custom_path();
-    }
+  const lastRow = document.createElement('div');
+  lastRow.classList.add('keyboard-row');
+  const enterButton = document.createElement('button');
+  enterButton.textContent = 'Enter';
+  enterButton.classList.add('wide-button');
+  enterButton.addEventListener('click', () => handleKeyPress('Enter'));
+  lastRow.appendChild(enterButton);
 
-    // If there is already a backups directory then try to use that.
-    if ( $this->get_existing_path() ) {
-      $paths[] = $this->get_existing_path();
-    }
+  const backspaceButton = document.createElement('button');
+  backspaceButton.textContent = '←';
+  backspaceButton.classList.add('wide-button');
+  backspaceButton.addEventListener('click', () => handleKeyPress('Backspace'));
+  lastRow.appendChild(backspaceButton);
 
-    // If not then default to a new directory in wp-content.
-    $paths[] = $this->get_default_path();
+  keyboard.appendChild(lastRow);
+}
 
-    // If that didn't work then fallback to a new directory in uploads.
-    $paths[] = $this->get_fallback_path();
+// Handle key presses
+function handleKeyPress(key) {
+  if (!gameActive) return;
 
-    return $paths;
-  }
+  key = key.toLowerCase();
 
-  /**
-   * Protect the directory that backups are stored in
-   *
-   * - Adds an index.html file in an attempt to disable directory browsing
-   * - Adds a .httaccess file to deny direct access if on Apache
-   *
-   * @param string $reset
-   */
-  public function protect_path( $reset = 'no' ) {
-
-    global $is_apache;
-
-    // Protect against directory browsing by including an index.html file
-    $index = $this->path . '/index.html';
-
-    if ( 'reset' === $reset && file_exists( $index ) ) {
-      @unlink( $index );
-    }
-
-    if ( ! file_exists( $index ) && wp_is_writable( $this->path ) ) {
-      file_put_contents( $index, '' );
-    }
-
-    $htaccess = $this->path . '/.htaccess';
-
-    if ( ( 'reset' === $reset ) && file_exists( $htaccess ) ) {
-      @unlink( $htaccess );
-    }
-
-    // Protect the directory with a .htaccess file on Apache servers
-    if ( $is_apache && function_exists( 'insert_with_markers' ) && ! file_exists( $htaccess ) && wp_is_writable( $this->path ) ) {
-
-      $contents   = array();
-      $contents[] = '# ' . sprintf( __( 'This %s file ensures that other people cannot download your backup files.', 'backupwordpress' ), '.htaccess' );
-      $contents[] = '';
-      $contents[] = '<IfModule mod_rewrite.c>';
-      $contents[] = 'RewriteEngine On';
-      $contents[] = 'RewriteCond %{QUERY_STRING} !key=' . HMBKP_SECURE_KEY;
-      $contents[] = 'RewriteRule (.*) - [F]';
-      $contents[] = '</IfModule>';
-      $contents[] = '';
-
-      file_put_contents( $htaccess, '' );
-
-      insert_with_markers( $htaccess, 'BackUpWordPress', $contents );
-
-    }
-
-  }
-
-  /**
-   * If we have more than one path then move any existing backups to the current path and remove them
-   */
-  public function merge_existing_paths() {
-
-    $paths = $this->get_existing_paths();
-
-    if ( ( ! empty( $paths ) && $this->get_custom_path() ) || count( $paths ) > 1 ) {
-      foreach ( $paths as $old_path ) {
-        $this->move_old_backups( $old_path );
+  if (key === 'enter') {
+    if (currentGuess.length === wordLength) {
+      if (validWordsSet.has(currentGuess.toLowerCase())) {
+        submitGuess();
+      } else {
+        showInvalidGuess();
       }
     }
+  } else if (key === 'backspace') {
+    currentGuess = currentGuess.slice(0, -1);
+    updateBoard();
+  } else if (/^[a-z]$/.test(key)) {
+    if (currentGuess.length < wordLength) {
+      currentGuess += key;
+      updateBoard();
+    }
+  }
+}
 
+// Update game board
+function updateBoard() {
+  const gameBoard = document.getElementById('game-board');
+  const tiles = gameBoard.querySelectorAll('.tile');
+  const rowStart = guesses.length * wordLength;
+
+  for (let i = 0; i < wordLength; i++) {
+    const tile = tiles[rowStart + i];
+    const tileText = tile.querySelector('span');
+    tileText.textContent = currentGuess[i] ? currentGuess[i].toUpperCase() : '';
+    tile.classList.remove('invalid');
+  }
+}
+
+// Submit guess and update keyboard
+function submitGuess() {
+  const gameBoard = document.getElementById('game-board');
+  const tiles = gameBoard.querySelectorAll('.tile');
+  const rowStart = guesses.length * wordLength;
+  const guessArray = currentGuess.split('');
+  const targetArray = targetWord.split('');
+  let remainingLetters = targetArray.slice();
+
+  // First pass for correct letters (green)
+  for (let i = 0; i < wordLength; i++) {
+    const tile = tiles[rowStart + i];
+    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
+
+    if (guessArray[i] === targetArray[i]) {
+      tile.classList.add('correct');
+      keyButton.classList.remove('key-present');
+      keyButton.classList.add('key-correct');
+      remainingLetters[i] = null; // Remove the letter from pool
+    }
   }
 
-  /**
-   * Move backup files from an existing directory and the new
-   * location.
-   *
-   * @param string $from The path to move the backups from.
-   */
-  public function move_old_backups( $from ) {
+  // Second pass for present letters (yellow) and absent (grey)
+  for (let i = 0; i < wordLength; i++) {
+    const tile = tiles[rowStart + i];
+    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
 
-    if ( ! is_readable( $from ) ) {
-      return;
-    }
-
-    if ( ! wp_is_writable( Path::get_path() ) ) {
-      return;
-    }
-
-    // Move any existing backups
-    if ( $handle = opendir( $from ) ) {
-
-      // Loop through the backup directory
-      while ( false !== ( $file = readdir( $handle ) ) ) {
-
-        // Find all zips
-        if ( 'zip' === pathinfo( $file, PATHINFO_EXTENSION ) ) {
-
-          // Try to move them
-          if ( ! @rename( trailingslashit( $from ) . $file, trailingslashit( Path::get_path() ) . $file ) ) {
-
-            // If we can't move them then try to copy them
-            copy( trailingslashit( $from ) . $file, trailingslashit( Path::get_path() ) . $file );
-
-          }
+    if (!tile.classList.contains('correct')) {
+      if (remainingLetters.includes(guessArray[i])) {
+        tile.classList.add('present');
+        if (!keyButton.classList.contains('key-correct')) {
+          keyButton.classList.add('key-present');
         }
+        remainingLetters[remainingLetters.indexOf(guessArray[i])] = null;
+      } else {
+        tile.classList.add('absent');
+        keyButton.classList.add('key-absent');
       }
-
-      closedir( $handle );
-
-    }
-
-    // Delete the old directory if it's inside WP_CONTENT_DIR
-    if ( false !== strpos( $from, WP_CONTENT_DIR ) &&  Path::get_path() !== $from ) {
-      rmdirtree( $from );
     }
   }
 
-  /**
-   * Clean any temporary / incomplete backups from the backups directory
-   */
-  public function cleanup() {
+  guesses.push(currentGuess);
 
-    // Don't cleanup a custom path, who knows what other stuff is there
-    if ( Path::get_path() === $this->get_custom_path() ) {
-      return;
+  if (currentGuess === targetWord) {
+    gameActive = false;
+    setTimeout(() => {
+      showWinningAnimation();
+      logResult(true, currentMode); // Log result by mode
+    }, 500);
+  } else if (guesses.length === maxGuesses) {
+    gameActive = false;
+    setTimeout(() => {
+      alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
+      logResult(false, currentMode); // Log result by mode
+    }, 500);
+  }
+
+  currentGuess = '';
+}
+
+// Function to log the result to Firebase
+function logResult(won, mode) {
+  const endTime = new Date();
+  const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
+  const log = {
+    player: playerName,
+    time: new Date().toLocaleString(),
+    timeTaken: timeTaken, // in seconds
+    attempts: guesses.length,
+    word: targetWord.toUpperCase(),
+    won: won,
+  };
+
+  // Save the log to Firebase under the appropriate mode (daily, random, or six-letter)
+  database.ref(`leaderboard/${mode}/` + Date.now()).set(log);
+}
+
+// Show invalid guess animation
+function showInvalidGuess() {
+  const gameBoard = document.getElementById('game-board');
+  const tiles = gameBoard.querySelectorAll('.tile');
+  const rowStart = guesses.length * wordLength;
+
+  for (let i = 0; i < wordLength; i++) {
+    const tile = tiles[rowStart + i];
+    tile.classList.add('invalid');
+  }
+
+  setTimeout(() => {
+    for (let i = 0; i < wordLength; i++) {
+      const tile = tiles[rowStart + i];
+      tile.classList.remove('invalid');
     }
+  }, 500);
+}
 
-    foreach ( new CleanUpIterator( new \DirectoryIterator( Path::get_path() ) ) as $file ) {
+// Function to show the winning animation and modal
+function showWinningAnimation() {
+  const winningModal = document.getElementById('winning-modal');
+  winningModal.style.display = 'block';
 
-      if ( $file->isDot() || ! $file->isReadable() || ! $file->isFile() ) {
-        continue;
+  // Fetch and display the word's definition
+  fetchWordDefinition(targetWord)
+    .then(definition => {
+      const definitionDiv = document.getElementById('word-definition');
+      definitionDiv.innerHTML = `<strong>Definition:</strong> ${definition}`;
+    })
+    .catch(error => {
+      const definitionDiv = document.getElementById('word-definition');
+      definitionDiv.innerHTML = `<strong>Definition:</strong> Not found.`;
+      console.error('Error fetching definition:', error);
+    });
+
+  // Confetti animation using canvas
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+
+  // Confetti particles
+  const confetti = [];
+  for (let i = 0; i < 300; i++) {
+    confetti.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      r: Math.random() * 6 + 4,
+      d: Math.random() * 10 + 10,
+      color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+      tilt: Math.random() * 90 - 45,
+    });
+  }
+
+  function drawConfetti() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    confetti.forEach((c) => {
+      ctx.beginPath();
+      ctx.lineWidth = c.r;
+      ctx.strokeStyle = c.color;
+      ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
+      ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
+      ctx.stroke();
+    });
+    updateConfetti();
+    requestAnimationFrame(drawConfetti);
+  }
+
+  function updateConfetti() {
+    confetti.forEach((c) => {
+      c.tilt += Math.random() * 0.5 - 0.25;
+      c.y += Math.cos(c.d) + 1 + c.r / 2;
+      c.x += Math.sin(0);
+      if (c.y > canvas.height) {
+        c.x = Math.random() * canvas.width;
+        c.y = -20;
       }
+    });
+  }
 
-      @unlink( $file->getPathname() );
+  drawConfetti();
+}
 
+// Fetch word definition from dictionary API
+async function fetchWordDefinition(word) {
+  try {
+    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+    if (!response.ok) {
+      throw new Error('Definition not found');
     }
+    const data = await response.json();
+    const definition = data[0].meanings[0].definitions[0].definition;
+    return definition;
+  } catch (error) {
+    console.error('Error fetching word definition:', error);
+    throw error;
   }
 }
 
-class CleanUpIterator extends \FilterIterator {
+// Open leaderboard with tabs
+function openLeaderboardTab(tabName) {
+  const tabcontent = document.getElementsByClassName('tabcontent');
+  const tablinks = document.getElementsByClassName('tablink');
 
-  // Don't match index.html, files with zip extension or status logfiles.
-  public function accept(): bool
-
-    // Don't remove existing backups
-    if ( 'zip' === pathinfo( $this->current()->getFilename(), PATHINFO_EXTENSION ) ) {
-      return false;
-    }
-
-    // Don't remove the index.html file
-    if ( 'index.html' === $this->current()->getBasename() ) {
-      return false;
-    }
-
-    // Don't remove the file manifest
-    if ( '.files' === $this->current()->getBasename() ) {
-      return false;
-    }
-
-    // Don't cleanup the backup running file
-    return ! preg_match( '/(.*-running)/', $this->current() );
-
+  for (let i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = 'none';
   }
+
+  for (let i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(' active', '');
+  }
+
+  document.getElementById(tabName).style.display = 'block';
+  document.getElementById(tabName + '-tab').className += ' active';
 }
+
+document.getElementById('daily-tab').click(); // Default to open Daily tab
+
+// View leaderboard data
+function viewLeaderboard() {
+  database.ref('leaderboard/daily').once('value', (snapshot) => {
+    displayLeaderboard(snapshot.val(), 'leaderboard-daily');
+  });
+
+  database.ref('leaderboard/random').once('value', (snapshot) => {
+    displayLeaderboard(snapshot.val(), 'leaderboard-random');
+  });
+
+  database.ref('leaderboard/six-letter').once('value', (snapshot) => {
+    displayLeaderboard(snapshot.val(), 'leaderboard-six-letter');
+  });
+
+  const leaderboardModal = document.getElementById('leaderboard-modal');
+  leaderboardModal.style.display = 'block';
+}
+
+function displayLeaderboard(data, elementId) {
+  const leaderboardElement = document.getElementById(elementId);
+  leaderboardElement.innerHTML = '';
+
+  if (!data) {
+    leaderboardElement.innerHTML = '<p>No leaderboard data available.</p>';
+    return;
+  }
+
+  const leaderboard = Object.values(data).sort((a, b) => a.timeTaken - b.timeTaken);
+  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Time (s)</th><th>Attempts</th><th>Result</th></tr>';
+  leaderboard.forEach((entry, index) => {
+    leaderboardHTML += `<tr>
+      <td>${index + 1}</td>
+      <td>${entry.player}</td>
+      <td>${entry.timeTaken}</td>
+      <td>${entry.attempts}</td>
+      <td>${entry.won ? 'Won' : 'Lost'}</td>
+    </tr>`;
+  });
+  leaderboardHTML += '</table>';
+  leaderboardElement.innerHTML = leaderboardHTML;
+}
+
+// Reset leaderboard at midnight
+function checkAndResetLeaderboard() {
+  const today = new Date().toLocaleDateString();
+  database.ref('leaderboard/resetDate').once('value', (snapshot) => {
+    const lastResetDate = snapshot.val();
+    if (lastResetDate !== today) {
+      resetLeaderboards();
+      database.ref('leaderboard/resetDate').set(today);
+    }
+  });
+}
+
+function resetLeaderboards() {
+  database.ref('leaderboard/daily').remove();
+  database.ref('leaderboard/random').remove();
+  database.ref('leaderboard/six-letter').remove();
+  console.log('Leaderboards reset at midnight.');
+}
+
+checkAndResetLeaderboard(); // Call the reset check on load
+
+// Add event listeners for buttons
+document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
+
+// Add event listeners for game mode buttons
+document.getElementById('daily-mode').addEventListener('click', () => startGame('daily'));
+document.getElementById('random-mode').addEventListener('click', () => startGame('random'));
+document.getElementById('six-letter-mode').addEventListener('click', () => startGame('six-letter'));
+
+// Add event listener for physical keyboard input
+document.addEventListener('keydown', (event) => {
+  let key = event.key;
+
+  if (key === 'Backspace' || key === 'Enter' || /^[a-zA-Z]$/.test(key)) {
+    event.preventDefault(); // Prevent default behavior for these keys
+    handleKeyPress(key);
+  }
+});
+
+// Start the game with default mode
+startGame('daily');
