@@ -223,35 +223,28 @@ function submitGuess() {
 
   // First pass for correct letters (green)
   for (let i = 0; i < wordLength; i++) {
-    const tile = tiles[rowStart + i];
-    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
+  const tile = tiles[rowStart + i];
+  const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
 
-    if (guessArray[i] === targetArray[i]) {
-      tile.classList.add('correct');
-      keyButton.classList.remove('key-present');
-      keyButton.classList.add('key-correct');
-      remainingLetters[i] = null; // Remove the letter from pool
-    }
-  }
-
-  // Second pass for present letters (yellow) and absent (grey)
-  for (let i = 0; i < wordLength; i++) {
-    const tile = tiles[rowStart + i];
-    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
-
-    if (!tile.classList.contains('correct')) {
-      if (remainingLetters.includes(guessArray[i])) {
-        tile.classList.add('present');
-        if (!keyButton.classList.contains('key-correct')) {
-          keyButton.classList.add('key-present');
-        }
-        remainingLetters[remainingLetters.indexOf(guessArray[i])] = null;
-      } else {
-        tile.classList.add('absent');
+  if (!tile.classList.contains('correct')) {
+    if (remainingLetters.includes(guessArray[i])) {
+      tile.classList.add('present');
+      if (!keyButton.classList.contains('key-correct')) {
+        keyButton.classList.add('key-present');
+      }
+      remainingLetters[remainingLetters.indexOf(guessArray[i])] = null;
+    } else {
+      tile.classList.add('absent');
+      // Only add 'key-absent' if the key hasn't been marked as 'key-correct' or 'key-present'
+      if (
+        !keyButton.classList.contains('key-correct') &&
+        !keyButton.classList.contains('key-present')
+      ) {
         keyButton.classList.add('key-absent');
       }
     }
   }
+}
 
   guesses.push(currentGuess);
 
