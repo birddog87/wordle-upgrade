@@ -49,7 +49,13 @@ async function startGame(mode) {
   // Set word length and target word based on mode
   if (mode === 'daily') {
     wordLength = 5;
-    targetWord = 'apple'; // For demonstration, use a fixed word
+    const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
+
+    // Use date as seed to select word
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const index = seed % wordArray.length;
+    targetWord = wordArray[index];
   } else if (mode === 'random') {
     wordLength = 5;
     const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
@@ -171,7 +177,9 @@ function createKeyboard() {
 function handleKeyPress(key) {
   if (!gameActive) return;
 
-  if (key === 'Enter') {
+  key = key.toLowerCase();
+
+  if (key === 'enter') {
     if (currentGuess.length === wordLength) {
       if (validWordsSet.has(currentGuess.toLowerCase())) {
         submitGuess();
@@ -179,12 +187,12 @@ function handleKeyPress(key) {
         showInvalidGuess();
       }
     }
-  } else if (key === 'Backspace') {
+  } else if (key === 'backspace') {
     currentGuess = currentGuess.slice(0, -1);
     updateBoard();
-  } else if (/^[A-Z]$/.test(key)) {
+  } else if (/^[a-z]$/.test(key)) {
     if (currentGuess.length < wordLength) {
-      currentGuess += key.toLowerCase();
+      currentGuess += key;
       updateBoard();
     }
   }
@@ -255,8 +263,6 @@ function submitGuess() {
     }, 500);
   } else if (guesses.length === maxGuesses) {
     gameActive = false;
-  } else if (guesses.length === maxGuesses) {
-    gameActive = false;
     setTimeout(() => {
       alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
       logResult(false, currentMode); // Log result by mode
@@ -279,7 +285,7 @@ function logResult(won, mode) {
     won: won,
   };
 
-  // Save the log to Firebase under the appropriate mode (daily, random, or sixLetter)
+  // Save the log to Firebase under the appropriate mode (daily, random, or six-letter)
   database.ref(`leaderboard/${mode}/` + Date.now()).set(log);
 }
 
@@ -412,7 +418,7 @@ function viewLeaderboard() {
     displayLeaderboard(snapshot.val(), 'leaderboard-random');
   });
 
-  database.ref('leaderboard/sixLetter').once('value', (snapshot) => {
+  database.ref('leaderboard/six-letter').once('value', (snapshot) => {
     displayLeaderboard(snapshot.val(), 'leaderboard-six-letter');
   });
 
@@ -459,11 +465,29 @@ function checkAndResetLeaderboard() {
 function resetLeaderboards() {
   database.ref('leaderboard/daily').remove();
   database.ref('leaderboard/random').remove();
-  database.ref('leaderboard/sixLetter').remove();
+  database.ref('leaderboard/six-letter').remove();
   console.log('Leaderboards reset at midnight.');
 }
 
 checkAndResetLeaderboard(); // Call the reset check on load
+
+// Add event listeners for buttons
+document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
+
+// Add event listeners for game mode buttons
+document.getElementById('daily-mode').addEventListener('click', () => startGame('daily'));
+document.getElementById('random-mode').addEventListener('click', () => startGame('random'));
+document.getElementById('six-letter-mode').addEventListener('click', () => startGame('six-letter'));
+
+// Add event listener for physical keyboard input
+document.addEventListener('keydown', (event) => {
+  let key = event.key;
+
+  if (key === 'Backspace' || key === 'Enter' || /^[a-zA-Z]$/.test(key)) {
+    event.preventDefault(); // Prevent default behavior for these keys
+    handleKeyPress(key);
+  }
+});
 
 // Start the game with default mode
 startGame('daily');
