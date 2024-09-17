@@ -219,32 +219,56 @@ function submitGuess() {
   const rowStart = guesses.length * wordLength;
   const guessArray = currentGuess.split('');
   const targetArray = targetWord.split('');
-  let remainingLetters = targetArray.slice();
+  const matchedIndices = new Array(wordLength).fill(false); // To track matched positions in target word
 
-  // First pass for correct letters (green)
+  // First pass: Check for correct letters in the correct position (Green)
   for (let i = 0; i < wordLength; i++) {
-  const tile = tiles[rowStart + i];
-  const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
+    const tile = tiles[rowStart + i];
+    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
 
-  if (!tile.classList.contains('correct')) {
-    if (remainingLetters.includes(guessArray[i])) {
-      tile.classList.add('present');
+    if (guessArray[i] === targetArray[i]) {
+      tile.classList.add('correct');
       if (!keyButton.classList.contains('key-correct')) {
-        keyButton.classList.add('key-present');
+        keyButton.classList.add('key-correct');
       }
-      remainingLetters[remainingLetters.indexOf(guessArray[i])] = null;
-    } else {
-      tile.classList.add('absent');
-      // Only add 'key-absent' if the key hasn't been marked as 'key-correct' or 'key-present'
-      if (
-        !keyButton.classList.contains('key-correct') &&
-        !keyButton.classList.contains('key-present')
-      ) {
-        keyButton.classList.add('key-absent');
+      matchedIndices[i] = true;
+    }
+  }
+
+  // Second pass: Check for correct letters in the wrong position (Yellow) and incorrect letters (Grey)
+  for (let i = 0; i < wordLength; i++) {
+    const tile = tiles[rowStart + i];
+    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
+
+    if (!tile.classList.contains('correct')) {
+      let found = false;
+      for (let j = 0; j < wordLength; j++) {
+        if (!matchedIndices[j] && guessArray[i] === targetArray[j]) {
+          found = true;
+          matchedIndices[j] = true; // Mark this position as matched
+          break;
+        }
+      }
+      if (found) {
+        tile.classList.add('present');
+        if (
+          !keyButton.classList.contains('key-correct') &&
+          !keyButton.classList.contains('key-present')
+        ) {
+          keyButton.classList.add('key-present');
+        }
+      } else {
+        tile.classList.add('absent');
+        if (
+          !keyButton.classList.contains('key-correct') &&
+          !keyButton.classList.contains('key-present') &&
+          !keyButton.classList.contains('key-absent')
+        ) {
+          keyButton.classList.add('key-absent');
+        }
       }
     }
   }
-}
 
   guesses.push(currentGuess);
 
@@ -265,10 +289,13 @@ function submitGuess() {
   currentGuess = '';
 }
 
+
 // Function to log the result to Firebase
 function logResult(won, mode) {
   const endTime = new Date();
   const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
+  const today = new Date().toLocaleDateString(); // e.g., "9/17/2024"
+
   const log = {
     player: playerName,
     time: new Date().toLocaleString(),
@@ -278,9 +305,10 @@ function logResult(won, mode) {
     won: won,
   };
 
-  // Save the log to Firebase under the appropriate mode (daily, random, or six-letter)
-  database.ref(`leaderboard/${mode}/` + Date.now()).set(log);
+  // Save the log to Firebase under the appropriate mode and date
+  database.ref(`leaderboard/${mode}/${today}/` + Date.now()).set(log);
 }
+
 
 // Show invalid guess animation
 function showInvalidGuess() {
@@ -403,28 +431,31 @@ document.getElementById('daily-tab').click(); // Default to open Daily tab
 
 // View leaderboard data
 function viewLeaderboard() {
-  database.ref('leaderboard/daily').once('value', (snapshot) => {
+  const today = new Date().toLocaleDateString();
+
+  database.ref(`leaderboard/daily/${today}`).once('value', (snapshot) => {
     displayLeaderboard(snapshot.val(), 'leaderboard-daily');
   });
 
-  database.ref('leaderboard/random').once('value', (snapshot) => {
+  database.ref(`leaderboard/random/${today}`).once('value', (snapshot) => {
     displayLeaderboard(snapshot.val(), 'leaderboard-random');
   });
 
-  database.ref('leaderboard/six-letter').once('value', (snapshot) => {
-    displayLeaderboard(snapshot.val(), 'leaderboard-six-letter');
+  database.ref(`leaderboard/six-letter/${today}`).once('value', (snapshot) => {
+    displayLeaderboard(snapshot.val(), 'leaderboard-sixLetter'); // Corrected ID
   });
 
   const leaderboardModal = document.getElementById('leaderboard-modal');
   leaderboardModal.style.display = 'block';
 }
 
+
 function displayLeaderboard(data, elementId) {
   const leaderboardElement = document.getElementById(elementId);
   leaderboardElement.innerHTML = '';
 
   if (!data) {
-    leaderboardElement.innerHTML = '<p>No leaderboard data available.</p>';
+    leaderboardElement.innerHTML = '<p>No leaderboard data available for today.</p>';
     return;
   }
 
@@ -443,7 +474,8 @@ function displayLeaderboard(data, elementId) {
   leaderboardElement.innerHTML = leaderboardHTML;
 }
 
-// Reset leaderboard at midnight
+
+/* // Reset leaderboard at midnight
 function checkAndResetLeaderboard() {
   const today = new Date().toLocaleDateString();
   database.ref('leaderboard/resetDate').once('value', (snapshot) => {
@@ -463,6 +495,7 @@ function resetLeaderboards() {
 }
 
 checkAndResetLeaderboard(); // Call the reset check on load
+*/
 
 // Add event listeners for buttons
 document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
