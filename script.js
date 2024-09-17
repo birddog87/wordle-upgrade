@@ -236,8 +236,7 @@ function showInvalidGuess() {
     tile.classList.add('invalid');
   }
 }
-
-// Function to submit a guess
+
 // Function to submit a guess
 function submitGuess() {
   const gameBoard = document.getElementById('game-board');
@@ -450,6 +449,30 @@ async function fetchWordDefinition(word) {
     throw error;
   }
 }
+
+function openLeaderboardTab(tabName) {
+  const tabcontent = document.getElementsByClassName('tabcontent');
+  const tablinks = document.getElementsByClassName('tablink');
+
+  // Hide all tab content
+  for (let i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = 'none';
+  }
+
+  // Remove active class from all buttons
+  for (let i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(' active', '');
+  }
+
+  // Show the clicked tab content
+  document.getElementById(tabName).style.display = 'block';
+
+  // Set the clicked tab to active
+  document.getElementById(tabName + '-tab').className += ' active';
+}
+
+// Default to open the Daily Word tab on modal open
+document.getElementById('daily-tab').click();
 
 // Event listeners for mode selection
 document.getElementById('daily-mode').addEventListener('click', () => startGame('daily'));
