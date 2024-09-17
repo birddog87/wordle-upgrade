@@ -20,8 +20,9 @@ let gameActive = false;
 let startTime;
 let playerName = '';
 let validWordsSet = new Set();
+let currentMode = 'daily'; // Track current game mode
 
-// Function to load the word list
+// Load word list
 async function loadWordList() {
   try {
     const response = await fetch('words.txt');
@@ -34,13 +35,14 @@ async function loadWordList() {
   }
 }
 
-// Function to start the game
+// Start the game based on mode
 async function startGame(mode) {
   await loadWordList();
   gameActive = true;
   currentGuess = '';
   guesses = [];
   startTime = new Date();
+  currentMode = mode;
 
   getPlayerName();
 
@@ -73,7 +75,7 @@ async function startGame(mode) {
   gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
 }
 
-// Function to get player name from localStorage or prompt
+// Get player's name from localStorage
 function getPlayerName() {
   playerName = localStorage.getItem('playerName') || '';
   if (!playerName) {
@@ -81,7 +83,7 @@ function getPlayerName() {
   }
 }
 
-// Function to show the name entry modal
+// Show name entry modal
 function showNameModal() {
   const nameModal = document.getElementById('name-modal');
   nameModal.style.display = 'block';
@@ -98,25 +100,23 @@ function showNameModal() {
   };
 }
 
-// Close name modal when 'X' is clicked
+// Close modals
 document.getElementById('name-modal-close').onclick = function () {
   const nameModal = document.getElementById('name-modal');
   nameModal.style.display = 'none';
 };
 
-// Close leaderboard modal when 'X' is clicked
 document.getElementById('leaderboard-modal-close').onclick = function () {
   const leaderboardModal = document.getElementById('leaderboard-modal');
   leaderboardModal.style.display = 'none';
 };
 
-// Close winning modal when 'Close' button is clicked
 document.getElementById('close-winning-modal').onclick = function () {
   const winningModal = document.getElementById('winning-modal');
   winningModal.style.display = 'none';
 };
 
-// Function to create the game board
+// Create game board
 function createBoard() {
   const gameBoard = document.getElementById('game-board');
   gameBoard.innerHTML = '';
@@ -125,15 +125,13 @@ function createBoard() {
   for (let i = 0; i < maxGuesses * wordLength; i++) {
     const tile = document.createElement('div');
     tile.classList.add('tile');
-
     const tileText = document.createElement('span');
     tile.appendChild(tileText);
-
     gameBoard.appendChild(tile);
   }
 }
 
-// Function to create the on-screen keyboard
+// Create keyboard
 function createKeyboard() {
   const keyboard = document.getElementById('keyboard');
   keyboard.innerHTML = '';
@@ -152,10 +150,8 @@ function createKeyboard() {
     keyboard.appendChild(rowDiv);
   });
 
-  // Add Enter and Backspace keys to the last row
   const lastRow = document.createElement('div');
   lastRow.classList.add('keyboard-row');
-
   const enterButton = document.createElement('button');
   enterButton.textContent = 'Enter';
   enterButton.classList.add('wide-button');
@@ -171,7 +167,7 @@ function createKeyboard() {
   keyboard.appendChild(lastRow);
 }
 
-// Function to handle key presses
+// Handle key presses
 function handleKeyPress(key) {
   if (!gameActive) return;
 
@@ -194,24 +190,7 @@ function handleKeyPress(key) {
   }
 }
 
-// Enable keyboard input on desktop
-document.addEventListener('keydown', (event) => {
-  if (!gameActive) return;
-
-  // Do not handle key presses if an input field is focused
-  if (document.activeElement.tagName === 'INPUT') return;
-
-  let key = event.key;
-  if (key === 'Enter') {
-    handleKeyPress('Enter');
-  } else if (key === 'Backspace' || key === 'Delete') {
-    handleKeyPress('Backspace');
-  } else if (/^[a-zA-Z]$/.test(key)) {
-    handleKeyPress(key.toUpperCase());
-  }
-});
-
-// Function to update the game board
+// Update game board
 function updateBoard() {
   const gameBoard = document.getElementById('game-board');
   const tiles = gameBoard.querySelectorAll('.tile');
@@ -225,91 +204,70 @@ function updateBoard() {
   }
 }
 
-// Function to show invalid guess animation
-function showInvalidGuess() {
-  const gameBoard = document.getElementById('game-board');
-  const tiles = gameBoard.querySelectorAll('.tile');
-  const rowStart = guesses.length * wordLength;
-
-  for (let i = 0; i < wordLength; i++) {
-    const tile = tiles[rowStart + i];
-    tile.classList.add('invalid');
-  }
-}
-
-// Function to submit a guess
+// Submit guess and update keyboard
 function submitGuess() {
   const gameBoard = document.getElementById('game-board');
   const tiles = gameBoard.querySelectorAll('.tile');
   const rowStart = guesses.length * wordLength;
   const guessArray = currentGuess.split('');
   const targetArray = targetWord.split('');
-
   let remainingLetters = targetArray.slice();
 
-  // First pass: Mark correct letters (green)
+  // First pass for correct letters (green)
   for (let i = 0; i < wordLength; i++) {
     const tile = tiles[rowStart + i];
-    const letter = guessArray[i].toUpperCase();
-    const keyButton = document.getElementById('key-' + letter);
+    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
 
     if (guessArray[i] === targetArray[i]) {
       tile.classList.add('correct');
-      keyButton.classList.remove('key-present', 'key-absent');
+      keyButton.classList.remove('key-present');
       keyButton.classList.add('key-correct');
-      remainingLetters[i] = null;
+      remainingLetters[i] = null; // Remove the letter from pool
     }
   }
 
-  // Second pass: Mark present letters (yellow) and absent letters (grey)
+  // Second pass for present letters (yellow) and absent (grey)
   for (let i = 0; i < wordLength; i++) {
     const tile = tiles[rowStart + i];
-    const letter = guessArray[i].toUpperCase();
-    const keyButton = document.getElementById('key-' + letter);
+    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
 
     if (!tile.classList.contains('correct')) {
       if (remainingLetters.includes(guessArray[i])) {
         tile.classList.add('present');
         if (!keyButton.classList.contains('key-correct')) {
-          keyButton.classList.remove('key-absent');
           keyButton.classList.add('key-present');
         }
         remainingLetters[remainingLetters.indexOf(guessArray[i])] = null;
       } else {
         tile.classList.add('absent');
-        if (!keyButton.classList.contains('key-correct') && !keyButton.classList.contains('key-present')) {
-          keyButton.classList.add('key-absent');
-        }
+        keyButton.classList.add('key-absent');
       }
     }
   }
 
   guesses.push(currentGuess);
 
-  // Check for win or loss
   if (currentGuess === targetWord) {
     gameActive = false;
     setTimeout(() => {
       showWinningAnimation();
-      logResult(true);
+      logResult(true, currentMode); // Log result by mode
     }, 500);
   } else if (guesses.length === maxGuesses) {
     gameActive = false;
     setTimeout(() => {
       alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
-      logResult(false);
+      logResult(false, currentMode); // Log result by mode
     }, 500);
   }
 
   currentGuess = '';
 }
 
-
-// Function to log the result
-function logResult(won) {
+// Function to log the result to Firebase
+function logResult(won, mode) {
   const endTime = new Date();
   const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
-
   const log = {
     player: playerName,
     time: new Date().toLocaleString(),
@@ -319,56 +277,30 @@ function logResult(won) {
     won: won,
   };
 
-  // Save log to Firebase
-  database.ref('leaderboard/' + Date.now()).set(log);
+  // Save the log to Firebase under the appropriate mode (daily, random, or sixLetter)
+  database.ref(`leaderboard/${mode}/` + Date.now()).set(log);
 }
 
-// Function to share result on WhatsApp
-function shareResult() {
-  const lastLogRef = database.ref('leaderboard').limitToLast(1);
-  lastLogRef.once('value', (snapshot) => {
-    const data = snapshot.val();
-    const log = Object.values(data)[0];
-    const message = `I just played Wordle Upgrade!\nPlayer: ${log.player}\nTime Taken: ${log.timeTaken} seconds\nAttempts: ${log.attempts}\n${log.won ? 'I won!' : 'I lost.'}`;
-    const whatsappURL = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-    window.open(whatsappURL, '_blank');
-  });
-}
+// Show invalid guess animation
+function showInvalidGuess() {
+  const gameBoard = document.getElementById('game-board');
+  const tiles = gameBoard.querySelectorAll('.tile');
+  const rowStart = guesses.length * wordLength;
 
-// Function to view the leaderboard
-function viewLeaderboard() {
-  database.ref('leaderboard').once('value', (snapshot) => {
-    const data = snapshot.val();
-    if (!data) {
-      alert('No leaderboard data available.');
-      return;
+  for (let i = 0; i < wordLength; i++) {
+    const tile = tiles[rowStart + i];
+    tile.classList.add('invalid');
+  }
+
+  setTimeout(() => {
+    for (let i = 0; i < wordLength; i++) {
+      const tile = tiles[rowStart + i];
+      tile.classList.remove('invalid');
     }
-
-    // Convert data to an array and sort by timeTaken
-    const leaderboard = Object.values(data).sort((a, b) => a.timeTaken - b.timeTaken);
-
-    // Build leaderboard HTML
-    let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Time (s)</th><th>Attempts</th><th>Result</th></tr>';
-    leaderboard.forEach((entry, index) => {
-      leaderboardHTML += `<tr>
-        <td>${index + 1}</td>
-        <td>${entry.player}</td>
-        <td>${entry.timeTaken}</td>
-        <td>${entry.attempts}</td>
-        <td>${entry.won ? 'Won' : 'Lost'}</td>
-      </tr>`;
-    });
-    leaderboardHTML += '</table>';
-
-    const leaderboardContent = document.getElementById('leaderboard-content');
-    leaderboardContent.innerHTML = leaderboardHTML;
-
-    const leaderboardModal = document.getElementById('leaderboard-modal');
-    leaderboardModal.style.display = 'block';
-  });
+  }, 500);
 }
 
-// Function to show winning animation and options
+// Function to show the winning animation and modal
 function showWinningAnimation() {
   const winningModal = document.getElementById('winning-modal');
   winningModal.style.display = 'block';
@@ -433,7 +365,7 @@ function showWinningAnimation() {
   drawConfetti();
 }
 
-// Function to fetch word definition from dictionary API
+// Fetch word definition from dictionary API
 async function fetchWordDefinition(word) {
   try {
     const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
@@ -441,7 +373,6 @@ async function fetchWordDefinition(word) {
       throw new Error('Definition not found');
     }
     const data = await response.json();
-    // Extract the first definition from the first meaning
     const definition = data[0].meanings[0].definitions[0].definition;
     return definition;
   } catch (error) {
@@ -450,38 +381,87 @@ async function fetchWordDefinition(word) {
   }
 }
 
+// Open leaderboard with tabs
 function openLeaderboardTab(tabName) {
   const tabcontent = document.getElementsByClassName('tabcontent');
   const tablinks = document.getElementsByClassName('tablink');
 
-  // Hide all tab content
   for (let i = 0; i < tabcontent.length; i++) {
     tabcontent[i].style.display = 'none';
   }
 
-  // Remove active class from all buttons
   for (let i = 0; i < tablinks.length; i++) {
     tablinks[i].className = tablinks[i].className.replace(' active', '');
   }
 
-  // Show the clicked tab content
   document.getElementById(tabName).style.display = 'block';
-
-  // Set the clicked tab to active
   document.getElementById(tabName + '-tab').className += ' active';
 }
 
-// Default to open the Daily Word tab on modal open
-document.getElementById('daily-tab').click();
+document.getElementById('daily-tab').click(); // Default to open Daily tab
 
-// Event listeners for mode selection
-document.getElementById('daily-mode').addEventListener('click', () => startGame('daily'));
-document.getElementById('random-mode').addEventListener('click', () => startGame('random'));
-document.getElementById('six-letter-mode').addEventListener('click', () => startGame('six-letter'));
-document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
+// View leaderboard data
+function viewLeaderboard() {
+  database.ref('leaderboard/daily').once('value', (snapshot) => {
+    displayLeaderboard(snapshot.val(), 'leaderboard-daily');
+  });
 
-// Event listeners for share and close buttons in the winning modal
-document.getElementById('share-button').addEventListener('click', shareResult);
+  database.ref('leaderboard/random').once('value', (snapshot) => {
+    displayLeaderboard(snapshot.val(), 'leaderboard-random');
+  });
 
-// Initialize the game
+  database.ref('leaderboard/sixLetter').once('value', (snapshot) => {
+    displayLeaderboard(snapshot.val(), 'leaderboard-six-letter');
+  });
+
+  const leaderboardModal = document.getElementById('leaderboard-modal');
+  leaderboardModal.style.display = 'block';
+}
+
+function displayLeaderboard(data, elementId) {
+  const leaderboardElement = document.getElementById(elementId);
+  leaderboardElement.innerHTML = '';
+
+  if (!data) {
+    leaderboardElement.innerHTML = '<p>No leaderboard data available.</p>';
+    return;
+  }
+
+  const leaderboard = Object.values(data).sort((a, b) => a.timeTaken - b.timeTaken);
+  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Time (s)</th><th>Attempts</th><th>Result</th></tr>';
+  leaderboard.forEach((entry, index) => {
+    leaderboardHTML += `<tr>
+      <td>${index + 1}</td>
+      <td>${entry.player}</td>
+      <td>${entry.timeTaken}</td>
+      <td>${entry.attempts}</td>
+      <td>${entry.won ? 'Won' : 'Lost'}</td>
+    </tr>`;
+  });
+  leaderboardHTML += '</table>';
+  leaderboardElement.innerHTML = leaderboardHTML;
+}
+
+// Reset leaderboard at midnight
+function checkAndResetLeaderboard() {
+  const today = new Date().toLocaleDateString();
+  database.ref('leaderboard/resetDate').once('value', (snapshot) => {
+    const lastResetDate = snapshot.val();
+    if (lastResetDate !== today) {
+      resetLeaderboards();
+      database.ref('leaderboard/resetDate').set(today);
+    }
+  });
+}
+
+function resetLeaderboards() {
+  database.ref('leaderboard/daily').remove();
+  database.ref('leaderboard/random').remove();
+  database.ref('leaderboard/sixLetter').remove();
+  console.log('Leaderboards reset at midnight.');
+}
+
+checkAndResetLeaderboard(); // Call the reset check on load
+
+// Start the game with default mode
 startGame('daily');
