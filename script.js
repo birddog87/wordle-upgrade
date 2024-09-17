@@ -255,6 +255,8 @@ function submitGuess() {
     }, 500);
   } else if (guesses.length === maxGuesses) {
     gameActive = false;
+  } else if (guesses.length === maxGuesses) {
+    gameActive = false;
     setTimeout(() => {
       alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
       logResult(false, currentMode); // Log result by mode
