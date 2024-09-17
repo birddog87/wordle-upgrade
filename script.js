@@ -20,7 +20,6 @@ let gameActive = false;
 let startTime;
 let playerName = '';
 let validWordsSet = new Set();
-let currentMode = 'daily';
 
 // Function to load the word list
 async function loadWordList() {
@@ -42,14 +41,13 @@ async function startGame(mode) {
   currentGuess = '';
   guesses = [];
   startTime = new Date();
-  currentMode = mode;
 
   getPlayerName();
 
   // Set word length and target word based on mode
   if (mode === 'daily') {
     wordLength = 5;
-    targetWord = getDailyWord(); // Implement this function to get a consistent daily word
+    targetWord = 'apple'; // For demonstration, use a fixed word
   } else if (mode === 'random') {
     wordLength = 5;
     const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
@@ -73,14 +71,6 @@ async function startGame(mode) {
 
   // Update game board grid to match word length
   gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
-}
-
-// Function to get a consistent daily word (implement your own logic here)
-function getDailyWord() {
-  const today = new Date();
-  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-  const wordArray = Array.from(validWordsSet).filter(word => word.length === 5);
-  return wordArray[seed % wordArray.length];
 }
 
 // Function to get player name from localStorage or prompt
@@ -248,6 +238,7 @@ function showInvalidGuess() {
 }
 
 // Function to submit a guess
+// Function to submit a guess
 function submitGuess() {
   const gameBoard = document.getElementById('game-board');
   const tiles = gameBoard.querySelectorAll('.tile');
@@ -314,6 +305,7 @@ function submitGuess() {
   currentGuess = '';
 }
 
+
 // Function to log the result
 function logResult(won) {
   const endTime = new Date();
@@ -321,38 +313,35 @@ function logResult(won) {
 
   const log = {
     player: playerName,
-    time: new Date().toISOString(),
+    time: new Date().toLocaleString(),
     timeTaken: timeTaken, // in seconds
     attempts: guesses.length,
     word: targetWord.toUpperCase(),
     won: won,
-    mode: currentMode
   };
 
   // Save log to Firebase
-  database.ref(`leaderboard/${currentMode}/${getDateString()}`).push(log);
-}
-
-// Function to get current date string
-function getDateString() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  database.ref('leaderboard/' + Date.now()).set(log);
 }
 
 // Function to share result on WhatsApp
 function shareResult() {
-  const message = `I just played Wordle Upgrade!\nMode: ${currentMode}\nWord: ${targetWord.toUpperCase()}\nAttempts: ${guesses.length}\n${gameActive ? 'I won!' : 'I lost.'}`;
-  const whatsappURL = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-  window.open(whatsappURL, '_blank');
+  const lastLogRef = database.ref('leaderboard').limitToLast(1);
+  lastLogRef.once('value', (snapshot) => {
+    const data = snapshot.val();
+    const log = Object.values(data)[0];
+    const message = `I just played Wordle Upgrade!\nPlayer: ${log.player}\nTime Taken: ${log.timeTaken} seconds\nAttempts: ${log.attempts}\n${log.won ? 'I won!' : 'I lost.'}`;
+    const whatsappURL = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    window.open(whatsappURL, '_blank');
+  });
 }
 
 // Function to view the leaderboard
-function viewLeaderboard(mode = 'daily') {
-  const dateString = getDateString();
-  database.ref(`leaderboard/${mode}/${dateString}`).once('value', (snapshot) => {
+function viewLeaderboard() {
+  database.ref('leaderboard').once('value', (snapshot) => {
     const data = snapshot.val();
     if (!data) {
-      alert('No leaderboard data available for today.');
+      alert('No leaderboard data available.');
       return;
     }
 
@@ -377,116 +366,99 @@ function viewLeaderboard(mode = 'daily') {
 
     const leaderboardModal = document.getElementById('leaderboard-modal');
     leaderboardModal.style.display = 'block';
-
-    // Update active tab
-    document.querySelectorAll('.leaderboard-tab').forEach(tab => {
-      tab.classList.remove('active');
-    });
-    document.getElementById(`${mode}-tab`).classList.add('active');
   });
 }
 
-// ... (previous code remains the same)
+// Function to show winning animation and options
+function showWinningAnimation() {
+  const winningModal = document.getElementById('winning-modal');
+  winningModal.style.display = 'block';
 
-  // Function to show winning animation and options (continued)
-  function showWinningAnimation() {
-    const winningModal = document.getElementById('winning-modal');
-    winningModal.style.display = 'block';
+  // Fetch and display the word's definition
+  fetchWordDefinition(targetWord)
+    .then(definition => {
+      const definitionDiv = document.getElementById('word-definition');
+      definitionDiv.innerHTML = `<strong>Definition:</strong> ${definition}`;
+    })
+    .catch(error => {
+      const definitionDiv = document.getElementById('word-definition');
+      definitionDiv.innerHTML = `<strong>Definition:</strong> Not found.`;
+      console.error('Error fetching definition:', error);
+    });
 
-    // Display the guessed word
-    const guessedWordElement = document.getElementById('guessed-word');
-    guessedWordElement.textContent = targetWord.toUpperCase();
+  // Confetti animation using canvas
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
 
-    // Fetch and display the word's definition
-    fetchWordDefinition(targetWord)
-      .then(definition => {
-        const definitionDiv = document.getElementById('word-definition');
-        definitionDiv.innerHTML = `<strong>Definition:</strong> ${definition}`;
-      })
-      .catch(error => {
-        const definitionDiv = document.getElementById('word-definition');
-        definitionDiv.innerHTML = `<strong>Definition:</strong> Not found.`;
-        console.error('Error fetching definition:', error);
-      });
-
-    // Confetti animation using canvas
-    const canvas = document.getElementById('confetti-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
-
-    // Confetti particles
-    const confetti = [];
-    for (let i = 0; i < 300; i++) {
-      confetti.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height - canvas.height,
-        r: Math.random() * 6 + 4,
-        d: Math.random() * 10 + 10,
-        color: `hsl(${Math.random() * 360}, 100%, 50%)`,
-        tilt: Math.random() * 90 - 45,
-      });
-    }
-
-    function drawConfetti() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      confetti.forEach((c) => {
-        ctx.beginPath();
-        ctx.lineWidth = c.r;
-        ctx.strokeStyle = c.color;
-        ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
-        ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
-        ctx.stroke();
-      });
-      updateConfetti();
-      requestAnimationFrame(drawConfetti);
-    }
-
-    function updateConfetti() {
-      confetti.forEach((c) => {
-        c.tilt += Math.random() * 0.5 - 0.25;
-        c.y += Math.cos(c.d) + 1 + c.r / 2;
-        c.x += Math.sin(0);
-        if (c.y > canvas.height) {
-          c.x = Math.random() * canvas.width;
-          c.y = -20;
-        }
-      });
-    }
-
-    drawConfetti();
+  // Confetti particles
+  const confetti = [];
+  for (let i = 0; i < 300; i++) {
+    confetti.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      r: Math.random() * 6 + 4,
+      d: Math.random() * 10 + 10,
+      color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+      tilt: Math.random() * 90 - 45,
+    });
   }
 
-  // Function to fetch word definition from dictionary API
-  async function fetchWordDefinition(word) {
-    try {
-      const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-      if (!response.ok) {
-        throw new Error('Definition not found');
+  function drawConfetti() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    confetti.forEach((c) => {
+      ctx.beginPath();
+      ctx.lineWidth = c.r;
+      ctx.strokeStyle = c.color;
+      ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
+      ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
+      ctx.stroke();
+    });
+    updateConfetti();
+    requestAnimationFrame(drawConfetti);
+  }
+
+  function updateConfetti() {
+    confetti.forEach((c) => {
+      c.tilt += Math.random() * 0.5 - 0.25;
+      c.y += Math.cos(c.d) + 1 + c.r / 2;
+      c.x += Math.sin(0);
+      if (c.y > canvas.height) {
+        c.x = Math.random() * canvas.width;
+        c.y = -20;
       }
-      const data = await response.json();
-      // Extract the first definition from the first meaning
-      const definition = data[0].meanings[0].definitions[0].definition;
-      return definition;
-    } catch (error) {
-      console.error('Error fetching word definition:', error);
-      throw error;
-    }
+    });
   }
 
-  // Event listeners for mode selection
-  document.getElementById('daily-mode').addEventListener('click', () => startGame('daily'));
-  document.getElementById('random-mode').addEventListener('click', () => startGame('random'));
-  document.getElementById('six-letter-mode').addEventListener('click', () => startGame('six-letter'));
-  document.getElementById('view-leaderboard').addEventListener('click', () => viewLeaderboard('daily'));
+  drawConfetti();
+}
 
-  // Event listeners for leaderboard tabs
-  document.getElementById('daily-tab').addEventListener('click', () => viewLeaderboard('daily'));
-  document.getElementById('random-tab').addEventListener('click', () => viewLeaderboard('random'));
-  document.getElementById('six-letter-tab').addEventListener('click', () => viewLeaderboard('six-letter'));
+// Function to fetch word definition from dictionary API
+async function fetchWordDefinition(word) {
+  try {
+    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+    if (!response.ok) {
+      throw new Error('Definition not found');
+    }
+    const data = await response.json();
+    // Extract the first definition from the first meaning
+    const definition = data[0].meanings[0].definitions[0].definition;
+    return definition;
+  } catch (error) {
+    console.error('Error fetching word definition:', error);
+    throw error;
+  }
+}
 
-  // Event listeners for share and close buttons in the winning modal
-  document.getElementById('share-button').addEventListener('click', shareResult);
+// Event listeners for mode selection
+document.getElementById('daily-mode').addEventListener('click', () => startGame('daily'));
+document.getElementById('random-mode').addEventListener('click', () => startGame('random'));
+document.getElementById('six-letter-mode').addEventListener('click', () => startGame('six-letter'));
+document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
 
-  // Initialize the game
-  startGame('daily');
+// Event listeners for share and close buttons in the winning modal
+document.getElementById('share-button').addEventListener('click', shareResult);
+
+// Initialize the game
+startGame('daily');

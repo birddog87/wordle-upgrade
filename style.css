@@ -222,28 +222,6 @@ h1 {
   background-color: #5A5A5C;
 }
 
-/* Leaderboard Tabs */
-.leaderboard-tabs {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 15px;
-}
-
-.leaderboard-tab {
-  background-color: #3A3A3C;
-  color: #FFFFFF;
-  border: none;
-  padding: 10px 20px;
-  margin: 0 5px;
-  cursor: pointer;
-  font-size: 1rem;
-  border-radius: 5px 5px 0 0;
-}
-
-.leaderboard-tab.active {
-  background-color: #5A5A5C;
-}
-
 /* Winning Modal */
 #winning-modal .modal-content {
   background-color: #1A1A1B;
@@ -265,12 +243,6 @@ h1 {
   margin-top: 20px;
   font-size: 1.1rem;
   color: #FFFFFF;
-}
-
-#guessed-word {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #538D4E;
 }
 
 #share-button,
@@ -337,36 +309,4 @@ h1 {
   #keyboard button.wide-button {
     flex: 0 1 50px;
   }
-
-  .leaderboard-tab {
-    font-size: 0.9rem;
-    padding: 8px 15px;
-  }
-}
-
-/* Leaderboard Table Styles */
-#leaderboard-content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-
-#leaderboard-content th, 
-#leaderboard-content td {
-  border: 1px solid #3A3A3C;
-  padding: 10px;
-  text-align: left;
-}
-
-#leaderboard-content th {
-  background-color: #3A3A3C;
-  color: #FFFFFF;
-}
-
-#leaderboard-content tr:nth-child(even) {
-  background-color: #1E1E1E;
-}
-
-#leaderboard-content tr:hover {
-  background-color: #2A2A2C;
 }
