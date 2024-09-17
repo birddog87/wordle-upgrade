@@ -1,59 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Wordle Upgrade</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Firebase Configuration -->
-  <!-- The core Firebase JS SDK is required -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle Upgrade</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="game-container">
-    <h1>Wordle Upgrade</h1>
-    <div class="mode-selection">
-      <button id="daily-mode">Word of the Day</button>
-      <button id="random-mode">Random Word</button>
-      <button id="six-letter-mode">6-Letter Word</button>
-      <button id="view-leaderboard">View Leaderboard</button>
-    </div>
-    <div id="game-board"></div>
-    <div id="keyboard"></div>
-  </div>
+    <div class="game-container">
+        <h1>Wordle Upgrade</h1>
 
-  <!-- Name Entry Modal -->
-  <div id="name-modal" class="modal">
-    <div class="modal-content">
-      <span class="close" id="name-modal-close">&times;</span>
-      <h2>Enter Your Name</h2>
-      <input type="text" id="player-name-input" placeholder="Your name">
-      <button id="save-name-button">Save</button>
-    </div>
-  </div>
+        <div class="mode-selection">
+            <button id="daily-mode">Word of the Day</button>
+            <button id="random-mode">Random Word</button>
+            <button id="six-letter-mode">6-Letter Word</button>
+            <button id="view-leaderboard">View Leaderboard</button>
+        </div>
 
-  <!-- Leaderboard Modal -->
-  <div id="leaderboard-modal" class="modal">
-    <div class="modal-content">
-      <span class="close" id="leaderboard-modal-close">&times;</span>
-      <h2>Leaderboard</h2>
-      <div id="leaderboard-content"></div>
-    </div>
-  </div>
+        <div id="game-board"></div>
 
-  <!-- Winning Options Modal -->
-  <div id="winning-modal" class="modal">
-    <div class="modal-content">
-      <h2>Congratulations!</h2>
-      <canvas id="confetti-canvas"></canvas>
-      <div id="word-definition"></div>
-      <button id="share-button">Share on WhatsApp</button>
-      <button id="close-winning-modal">Close</button>
+        <div id="keyboard"></div>
     </div>
-  </div>
 
-  <!-- Your App Script -->
-  <script src="script.js"></script>
+    <div id="name-modal" class="modal">
+        <div class="modal-content">
+            <span id="name-modal-close" class="close">&times;</span>
+            <h2>Enter Your Name</h2>
+            <input type="text" id="player-name-input" placeholder="Your name">
+            <button id="save-name-button">Save</button>
+        </div>
+    </div>
+
+    <div id="leaderboard-modal" class="modal">
+        <div class="modal-content">
+            <span id="leaderboard-modal-close" class="close">&times;</span>
+            <h2>Leaderboard</h2>
+            <div class="leaderboard-tabs">
+                <button id="daily-tab" class="leaderboard-tab active">Daily</button>
+                <button id="random-tab" class="leaderboard-tab">Random</button>
+                <button id="six-letter-tab" class="leaderboard-tab">6-Letter</button>
+            </div>
+            <div id="leaderboard-content"></div>
+        </div>
+    </div>
+
+    <div id="winning-modal" class="modal">
+        <div class="modal-content">
+            <h2>Congratulations!</h2>
+            <p>You guessed the word: <span id="guessed-word"></span></p>
+            <canvas id="confetti-canvas"></canvas>
+            <div id="word-definition"></div>
+            <button id="share-button">Share on WhatsApp</button>
+            <button id="close-winning-modal">Close</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <script src="script.js"></script>
 </body>
 </html>
