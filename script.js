@@ -94,17 +94,21 @@ function showNameModal() {
   const nameModal = document.getElementById('name-modal');
   nameModal.style.display = 'block';
 
+  // Automatically focus the input field when the modal opens
+  const playerNameInput = document.getElementById('player-name-input');
+  playerNameInput.focus();
+
   document.getElementById('save-name-button').onclick = function () {
-    const nameInput = document.getElementById('player-name-input');
-    if (nameInput.value.trim()) {
-      playerName = nameInput.value.trim();
-      localStorage.setItem('playerName', playerName);
-      nameModal.style.display = 'none';
-    } else {
-      alert('Please enter your name.');
-    }
-  };
-}
+  const nameInput = document.getElementById('player-name-input');
+  if (nameInput.value.trim()) {
+    playerName = nameInput.value.trim();
+    localStorage.setItem('playerName', playerName);
+    nameModal.style.display = 'none';
+    startGame(currentMode); // Restart the game after saving the name
+  } else {
+    alert('Please enter your name.');
+  }
+};
 
 // Close modals
 document.getElementById('name-modal-close').onclick = function () {
@@ -507,6 +511,16 @@ document.getElementById('six-letter-mode').addEventListener('click', () => start
 
 // Add event listener for physical keyboard input
 document.addEventListener('keydown', (event) => {
+  const nameModal = document.getElementById('name-modal');
+  const isNameModalOpen = nameModal.style.display === 'block';
+  const playerNameInput = document.getElementById('player-name-input');
+  const isInputFocused = document.activeElement === playerNameInput;
+
+  // If the name modal is open and the input is focused, do not handle the keypress for the game
+  if (isNameModalOpen && isInputFocused) {
+    return; // Let the input field handle the keypress
+  }
+
   let key = event.key;
 
   if (key === 'Backspace' || key === 'Enter' || /^[a-zA-Z]$/.test(key)) {
@@ -514,6 +528,7 @@ document.addEventListener('keydown', (event) => {
     handleKeyPress(key);
   }
 });
+
 
 // Start the game with default mode
 startGame('daily');
