@@ -1,14 +1,132 @@
 // Initialize Firebase (Using your Firebase project's configuration)
 var firebaseConfig = {
-  apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs",
+  apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs", // Replace with your actual API key
   authDomain: "wordle-upgrade-c055f.firebaseapp.com",
   databaseURL: "https://wordle-upgrade-c055f-default-rtdb.firebaseio.com",
   projectId: "wordle-upgrade-c055f",
-  appId: "1:683362789332:web:96a84b1ffae380e5e85841",
+  appId: "1:683362789332:web:e3aeb537a5f96773e85841",
+  // Add other Firebase config parameters as needed
 };
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
+firebase.analytics();
 var database = firebase.database();
+var auth = firebase.auth();
+
+// Initialize i18next for Localization
+i18next.init({
+  lng: 'en', // default language
+  debug: true,
+  resources: {
+    en: {
+      translation: {
+        "title": "Wordle Upgrade",
+        "daily_mode": "Word of the Day",
+        "random_mode": "Random Word",
+        "six_letter_mode": "6-Letter Word",
+        "view_leaderboard": "View Leaderboard",
+        "feedback": "Feedback",
+        "get_suggestions": "Get Suggestions",
+        "statistics": "Your Statistics",
+        "enter_name": "Enter Your Name",
+        "save": "Save",
+        "leaderboard": "Leaderboard",
+        "daily_word": "Daily Word",
+        "random_word": "Random Word",
+        "six_letter_word": "6-Letter Word",
+        "global": "Global",
+        "daily_word_leaderboard": "Daily Word Leaderboard",
+        "random_word_leaderboard": "Random Word Leaderboard",
+        "six_letter_word_leaderboard": "6-Letter Word Leaderboard",
+        "global_leaderboard": "Global Leaderboard",
+        "congratulations": "Congratulations!",
+        "share": "Share on Twitter",
+        "close": "Close",
+        "login_signup": "Login / Sign Up",
+        "email_signin": "Email Sign-In",
+        "signin": "Sign In",
+        "signup": "Sign Up",
+        "achievements": "Achievements",
+        "profile": "Your Profile"
+        // Add more translations as needed
+      }
+    },
+    es: {
+      translation: {
+        "title": "Wordle Mejorado",
+        "daily_mode": "Palabra del Día",
+        "random_mode": "Palabra Aleatoria",
+        "six_letter_mode": "Palabra de 6 Letras",
+        "view_leaderboard": "Ver Tabla de Líderes",
+        "feedback": "Comentarios",
+        "get_suggestions": "Obtener Sugerencias",
+        "statistics": "Tus Estadísticas",
+        "enter_name": "Ingresa Tu Nombre",
+        "save": "Guardar",
+        "leaderboard": "Tabla de Líderes",
+        "daily_word": "Palabra Diaria",
+        "random_word": "Palabra Aleatoria",
+        "six_letter_word": "Palabra de 6 Letras",
+        "global": "Global",
+        "daily_word_leaderboard": "Tabla de Líderes de la Palabra Diaria",
+        "random_word_leaderboard": "Tabla de Líderes de Palabra Aleatoria",
+        "six_letter_word_leaderboard": "Tabla de Líderes de Palabra de 6 Letras",
+        "global_leaderboard": "Tabla de Líderes Global",
+        "congratulations": "¡Felicidades!",
+        "share": "Compartir en Twitter",
+        "close": "Cerrar",
+        "login_signup": "Iniciar Sesión / Registrarse",
+        "email_signin": "Inicio de Sesión por Correo",
+        "signin": "Iniciar Sesión",
+        "signup": "Registrarse",
+        "achievements": "Logros",
+        "profile": "Tu Perfil"
+        // Add more translations as needed
+      }
+    }
+    // Add more languages as needed
+  }
+}, function(err, t) {
+  updateContent();
+});
+
+// Update content based on selected language
+function updateContent() {
+  document.querySelectorAll('[data-i18n]').forEach(function(element) {
+    var key = element.getAttribute('data-i18n');
+    element.innerHTML = i18next.t(key);
+  });
+}
+
+// Language Selection
+const languageSelect = document.getElementById('language-select');
+languageSelect.addEventListener('change', (event) => {
+  const selectedLang = event.target.value;
+  i18next.changeLanguage(selectedLang, () => {
+    updateContent();
+  });
+});
+
+// Theme Toggle
+const themeToggleBtn = document.getElementById('theme-toggle');
+themeToggleBtn.addEventListener('click', () => {
+  document.body.classList.toggle('light-theme');
+  document.body.classList.toggle('high-contrast-theme');
+  // Save user preference in localStorage
+  const currentTheme = document.body.classList.contains('light-theme') ? 'light' :
+                       document.body.classList.contains('high-contrast-theme') ? 'high-contrast' : 'dark';
+  localStorage.setItem('theme', currentTheme);
+});
+
+// Load saved theme on page load
+window.addEventListener('load', () => {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-theme');
+  } else if (savedTheme === 'high-contrast') {
+    document.body.classList.add('high-contrast-theme');
+  }
+});
 
 // Variables to store game state
 let targetWord = '';
@@ -22,14 +140,25 @@ let playerName = '';
 let validWordsSet = new Set();
 let currentMode = 'daily'; // Track current game mode
 
-// Load word list
+// User ID for Firebase (after authentication)
+let userId = null;
+
+// Load word lists for different languages
+const wordLists = {
+  en: 'words_en.txt',
+  es: 'words_es.txt'
+  // Add more languages and their word lists
+};
+
+// Load word list based on current language and mode
 async function loadWordList() {
   try {
-    const response = await fetch('words.txt');
+    const language = i18next.language || 'en';
+    const response = await fetch(wordLists[language]);
     const text = await response.text();
     const wordsArray = text.split('\n').map(word => word.trim().toLowerCase());
     validWordsSet = new Set(wordsArray);
-    console.log('Word list loaded');
+    console.log('Word list loaded for language:', language);
   } catch (error) {
     console.error('Error loading word list:', error);
   }
@@ -81,11 +210,21 @@ async function startGame(mode) {
   gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
 }
 
-// Get player's name from localStorage
+// Get player's name from Firebase or prompt for it
 function getPlayerName() {
-  playerName = localStorage.getItem('playerName') || '';
-  if (!playerName) {
-    showNameModal();
+  if (userId) {
+    database.ref(`users/${userId}/profile/name`).once('value').then(snapshot => {
+      playerName = snapshot.val() || '';
+      if (!playerName) {
+        showNameModal();
+      }
+    });
+  } else {
+    // If not authenticated, use localStorage
+    playerName = localStorage.getItem('playerName') || '';
+    if (!playerName) {
+      showNameModal();
+    }
   }
 }
 
@@ -93,38 +232,42 @@ function getPlayerName() {
 function showNameModal() {
   const nameModal = document.getElementById('name-modal');
   nameModal.style.display = 'block';
+  nameModal.setAttribute('aria-hidden', 'false');
 
   // Automatically focus the input field when the modal opens
   const playerNameInput = document.getElementById('player-name-input');
   playerNameInput.focus();
 
   document.getElementById('save-name-button').onclick = function () {
-  const nameInput = document.getElementById('player-name-input');
-  if (nameInput.value.trim()) {
-    playerName = nameInput.value.trim();
-    localStorage.setItem('playerName', playerName);
-    nameModal.style.display = 'none';
-    startGame(currentMode); // Restart the game after saving the name
-  } else {
-    alert('Please enter your name.');
-  }
-};
+    const nameInput = playerNameInput;
+    if (nameInput.value.trim()) {
+      playerName = nameInput.value.trim();
+      if (userId) {
+        // Save to Firebase
+        database.ref(`users/${userId}/profile`).update({
+          name: playerName
+        });
+      } else {
+        // Save to localStorage
+        localStorage.setItem('playerName', playerName);
+      }
+      nameModal.style.display = 'none';
+      nameModal.setAttribute('aria-hidden', 'true');
+      startGame(currentMode); // Restart the game after saving the name
+    } else {
+      alert(i18next.t('please_enter_name') || 'Please enter your name.');
+    }
+  };
+}
 
 // Close modals
-document.getElementById('name-modal-close').onclick = function () {
-  const nameModal = document.getElementById('name-modal');
-  nameModal.style.display = 'none';
-};
-
-document.getElementById('leaderboard-modal-close').onclick = function () {
-  const leaderboardModal = document.getElementById('leaderboard-modal');
-  leaderboardModal.style.display = 'none';
-};
-
-document.getElementById('close-winning-modal').onclick = function () {
-  const winningModal = document.getElementById('winning-modal');
-  winningModal.style.display = 'none';
-};
+document.querySelectorAll('.close').forEach(closeBtn => {
+  closeBtn.onclick = function () {
+    const modal = this.parentElement.parentElement;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  };
+});
 
 // Create game board
 function createBoard() {
@@ -154,6 +297,7 @@ function createKeyboard() {
       const button = document.createElement('button');
       button.textContent = key;
       button.id = 'key-' + key;
+      button.setAttribute('aria-label', key);
       button.addEventListener('click', () => handleKeyPress(key));
       rowDiv.appendChild(button);
     });
@@ -165,12 +309,14 @@ function createKeyboard() {
   const enterButton = document.createElement('button');
   enterButton.textContent = 'Enter';
   enterButton.classList.add('wide-button');
+  enterButton.setAttribute('aria-label', 'Enter');
   enterButton.addEventListener('click', () => handleKeyPress('Enter'));
   lastRow.appendChild(enterButton);
 
   const backspaceButton = document.createElement('button');
   backspaceButton.textContent = '←';
   backspaceButton.classList.add('wide-button');
+  backspaceButton.setAttribute('aria-label', 'Backspace');
   backspaceButton.addEventListener('click', () => handleKeyPress('Backspace'));
   lastRow.appendChild(backspaceButton);
 
@@ -215,6 +361,28 @@ function updateBoard() {
     tile.classList.remove('invalid');
   }
 }
+
+function displayAchievements() {
+  if (!userId) return;
+
+  const achievementsList = document.getElementById('achievements-list');
+  achievementsList.innerHTML = '';
+
+  const achievementsRef = database.ref(`users/${userId}/achievements`);
+  achievementsRef.once('value').then(snapshot => {
+    const userAchievements = snapshot.val() || {};
+    achievements.forEach(achievement => {
+      const achiv = document.createElement('div');
+      achiv.classList.add('achievement');
+      achiv.innerHTML = `
+        <img src="icons/${achievement.id}.png" alt="${achievement.name} Icon">
+        <strong>${achievement.name}</strong>: ${achievement.description} - ${userAchievements[achievement.id] ? '✅' : '❌'}
+      `;
+      achievementsList.appendChild(achiv);
+    });
+  });
+}
+
 
 // Submit guess and update keyboard
 function submitGuess() {
@@ -281,254 +449,21 @@ function submitGuess() {
     setTimeout(() => {
       showWinningAnimation();
       logResult(true, currentMode); // Log result by mode
+      updateAchievements();
     }, 500);
   } else if (guesses.length === maxGuesses) {
     gameActive = false;
     setTimeout(() => {
       alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
       logResult(false, currentMode); // Log result by mode
+      updateAchievements();
     }, 500);
   }
 
   currentGuess = '';
 }
 
-
 // Function to log the result to Firebase
 function logResult(won, mode) {
   const endTime = new Date();
-  const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
-  const today = new Date().toLocaleDateString(); // e.g., "9/17/2024"
-
-  const log = {
-    player: playerName,
-    time: new Date().toLocaleString(),
-    timeTaken: timeTaken, // in seconds
-    attempts: guesses.length,
-    word: targetWord.toUpperCase(),
-    won: won,
-  };
-
-  // Save the log to Firebase under the appropriate mode and date
-  database.ref(`leaderboard/${mode}/${today}/` + Date.now()).set(log);
-}
-
-
-// Show invalid guess animation
-function showInvalidGuess() {
-  const gameBoard = document.getElementById('game-board');
-  const tiles = gameBoard.querySelectorAll('.tile');
-  const rowStart = guesses.length * wordLength;
-
-  for (let i = 0; i < wordLength; i++) {
-    const tile = tiles[rowStart + i];
-    tile.classList.add('invalid');
-  }
-
-  setTimeout(() => {
-    for (let i = 0; i < wordLength; i++) {
-      const tile = tiles[rowStart + i];
-      tile.classList.remove('invalid');
-    }
-  }, 500);
-}
-
-// Function to show the winning animation and modal
-function showWinningAnimation() {
-  const winningModal = document.getElementById('winning-modal');
-  winningModal.style.display = 'block';
-
-  // Fetch and display the word's definition
-  fetchWordDefinition(targetWord)
-    .then(definition => {
-      const definitionDiv = document.getElementById('word-definition');
-      definitionDiv.innerHTML = `<strong>Definition:</strong> ${definition}`;
-    })
-    .catch(error => {
-      const definitionDiv = document.getElementById('word-definition');
-      definitionDiv.innerHTML = `<strong>Definition:</strong> Not found.`;
-      console.error('Error fetching definition:', error);
-    });
-
-  // Confetti animation using canvas
-  const canvas = document.getElementById('confetti-canvas');
-  const ctx = canvas.getContext('2d');
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
-
-  // Confetti particles
-  const confetti = [];
-  for (let i = 0; i < 300; i++) {
-    confetti.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height - canvas.height,
-      r: Math.random() * 6 + 4,
-      d: Math.random() * 10 + 10,
-      color: `hsl(${Math.random() * 360}, 100%, 50%)`,
-      tilt: Math.random() * 90 - 45,
-    });
-  }
-
-  function drawConfetti() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    confetti.forEach((c) => {
-      ctx.beginPath();
-      ctx.lineWidth = c.r;
-      ctx.strokeStyle = c.color;
-      ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
-      ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
-      ctx.stroke();
-    });
-    updateConfetti();
-    requestAnimationFrame(drawConfetti);
-  }
-
-  function updateConfetti() {
-    confetti.forEach((c) => {
-      c.tilt += Math.random() * 0.5 - 0.25;
-      c.y += Math.cos(c.d) + 1 + c.r / 2;
-      c.x += Math.sin(0);
-      if (c.y > canvas.height) {
-        c.x = Math.random() * canvas.width;
-        c.y = -20;
-      }
-    });
-  }
-
-  drawConfetti();
-}
-
-// Fetch word definition from dictionary API
-async function fetchWordDefinition(word) {
-  try {
-    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-    if (!response.ok) {
-      throw new Error('Definition not found');
-    }
-    const data = await response.json();
-    const definition = data[0].meanings[0].definitions[0].definition;
-    return definition;
-  } catch (error) {
-    console.error('Error fetching word definition:', error);
-    throw error;
-  }
-}
-
-// Open leaderboard with tabs
-function openLeaderboardTab(tabName) {
-  const tabcontent = document.getElementsByClassName('tabcontent');
-  const tablinks = document.getElementsByClassName('tablink');
-
-  for (let i = 0; i < tabcontent.length; i++) {
-    tabcontent[i].style.display = 'none';
-  }
-
-  for (let i = 0; i < tablinks.length; i++) {
-    tablinks[i].className = tablinks[i].className.replace(' active', '');
-  }
-
-  document.getElementById(tabName).style.display = 'block';
-  document.getElementById(tabName + '-tab').className += ' active';
-}
-
-document.getElementById('daily-tab').click(); // Default to open Daily tab
-
-// View leaderboard data
-function viewLeaderboard() {
-  const today = new Date().toLocaleDateString();
-
-  database.ref(`leaderboard/daily/${today}`).once('value', (snapshot) => {
-    displayLeaderboard(snapshot.val(), 'leaderboard-daily');
-  });
-
-  database.ref(`leaderboard/random/${today}`).once('value', (snapshot) => {
-    displayLeaderboard(snapshot.val(), 'leaderboard-random');
-  });
-
-  database.ref(`leaderboard/six-letter/${today}`).once('value', (snapshot) => {
-    displayLeaderboard(snapshot.val(), 'leaderboard-sixLetter'); // Corrected ID
-  });
-
-  const leaderboardModal = document.getElementById('leaderboard-modal');
-  leaderboardModal.style.display = 'block';
-}
-
-
-function displayLeaderboard(data, elementId) {
-  const leaderboardElement = document.getElementById(elementId);
-  leaderboardElement.innerHTML = '';
-
-  if (!data) {
-    leaderboardElement.innerHTML = '<p>No leaderboard data available for today.</p>';
-    return;
-  }
-
-  const leaderboard = Object.values(data).sort((a, b) => a.timeTaken - b.timeTaken);
-  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Time (s)</th><th>Attempts</th><th>Result</th></tr>';
-  leaderboard.forEach((entry, index) => {
-    leaderboardHTML += `<tr>
-      <td>${index + 1}</td>
-      <td>${entry.player}</td>
-      <td>${entry.timeTaken}</td>
-      <td>${entry.attempts}</td>
-      <td>${entry.won ? 'Won' : 'Lost'}</td>
-    </tr>`;
-  });
-  leaderboardHTML += '</table>';
-  leaderboardElement.innerHTML = leaderboardHTML;
-}
-
-
-/* // Reset leaderboard at midnight
-function checkAndResetLeaderboard() {
-  const today = new Date().toLocaleDateString();
-  database.ref('leaderboard/resetDate').once('value', (snapshot) => {
-    const lastResetDate = snapshot.val();
-    if (lastResetDate !== today) {
-      resetLeaderboards();
-      database.ref('leaderboard/resetDate').set(today);
-    }
-  });
-}
-
-function resetLeaderboards() {
-  database.ref('leaderboard/daily').remove();
-  database.ref('leaderboard/random').remove();
-  database.ref('leaderboard/six-letter').remove();
-  console.log('Leaderboards reset at midnight.');
-}
-
-checkAndResetLeaderboard(); // Call the reset check on load
-*/
-
-// Add event listeners for buttons
-document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
-
-// Add event listeners for game mode buttons
-document.getElementById('daily-mode').addEventListener('click', () => startGame('daily'));
-document.getElementById('random-mode').addEventListener('click', () => startGame('random'));
-document.getElementById('six-letter-mode').addEventListener('click', () => startGame('six-letter'));
-
-// Add event listener for physical keyboard input
-document.addEventListener('keydown', (event) => {
-  const nameModal = document.getElementById('name-modal');
-  const isNameModalOpen = nameModal.style.display === 'block';
-  const playerNameInput = document.getElementById('player-name-input');
-  const isInputFocused = document.activeElement === playerNameInput;
-
-  // If the name modal is open and the input is focused, do not handle the keypress for the game
-  if (isNameModalOpen && isInputFocused) {
-    return; // Let the input field handle the keypress
-  }
-
-  let key = event.key;
-
-  if (key === 'Backspace' || key === 'Enter' || /^[a-zA-Z]$/.test(key)) {
-    event.preventDefault(); // Prevent default behavior for these keys
-    handleKeyPress(key);
-  }
-});
-
-
-// Start the game with default mode
-startGame('daily');
+  cons
