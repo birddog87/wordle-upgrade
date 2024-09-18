@@ -328,7 +328,10 @@ function createBoard() {
     tile.appendChild(tileText);
     gameBoard.appendChild(tile);
   }
+
+  console.log('Game board created with', maxGuesses * wordLength, 'tiles'); // Add this log
 }
+
 
 // Create keyboard
 function createKeyboard() {
@@ -1018,16 +1021,18 @@ auth.onAuthStateChanged((user) => {
 document.getElementById('google-signin-button').addEventListener('click', () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).catch(error => {
-    console.error('Google Sign-In Error:', error);
-  });
+    console.error('Google Sign-In Error:', error.message);
+});
+
 });
 
 // Sign In with Facebook
 document.getElementById('facebook-signin-button').addEventListener('click', () => {
   const provider = new firebase.auth.FacebookAuthProvider();
   auth.signInWithPopup(provider).catch(error => {
-    console.error('Facebook Sign-In Error:', error);
-  });
+    console.error('Facebook Sign-In Error:', error.message);
+});
+
 });
 
 // Email Sign-In Button
