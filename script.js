@@ -51,24 +51,23 @@ i18next.init({
         "please_enter_name": "Please enter your name.",
         "definition": "Definition",
         "not_found": "Not found.",
+        "won": "Won",
+        "lost": "Lost",
+        "games_played": "Games Played",
+        "win_percentage": "Win Percentage",
+        "average_attempts": "Average Attempts",
+        "games_won": "Games Won",
+        "games_lost": "Games Lost",
         "definitions": "Definitions",
         "synonyms": "Synonyms",
         "antonyms": "Antonyms",
         "suggestions": "Suggestions",
-        "games_played": "Games Played",
-        "win_percentage": "Win Percentage",
-        "average_attempts": "Average Attempts",
-        "won": "Won",
-        "lost": "Lost",
         "feedback_thank_you": "Thank you for your feedback!",
         "feedback_error": "There was an issue submitting your feedback. Please try again.",
         "feedback_auth_required": "Please sign in to submit feedback.",
-        "please_enter_feedback": "Please enter your feedback.",
-        "games_won": "Games Won",
-        "games_lost": "Games Lost",
         "wordlist_submitted": "Word list submitted successfully!",
         "wordlist_error": "Error submitting word list. Please try again.",
-        "please_enter_wordlist": "Please enter at least one word."
+        "please_enter_wordlist": "Please enter at least one word.",
         // Add more translations as needed
       }
     },
@@ -105,30 +104,32 @@ i18next.init({
         "please_enter_name": "Por favor, ingresa tu nombre.",
         "definition": "Definición",
         "not_found": "No encontrado.",
+        "won": "Ganó",
+        "lost": "Perdió",
+        "games_played": "Juegos Jugados",
+        "win_percentage": "Porcentaje de Ganadas",
+        "average_attempts": "Intentos Promedio",
+        "games_won": "Juegos Ganados",
+        "games_lost": "Juegos Perdidos",
         "definitions": "Definiciones",
         "synonyms": "Sinónimos",
         "antonyms": "Antónimos",
         "suggestions": "Sugerencias",
-        "games_played": "Juegos Jugados",
-        "win_percentage": "Porcentaje de Victorias",
-        "average_attempts": "Promedio de Intentos",
-        "won": "Ganado",
-        "lost": "Perdido",
         "feedback_thank_you": "¡Gracias por tus comentarios!",
-        "feedback_error": "Hubo un problema al enviar tus comentarios. Por favor, intenta de nuevo.",
+        "feedback_error": "Hubo un problema al enviar tus comentarios. Por favor, intenta nuevamente.",
         "feedback_auth_required": "Por favor, inicia sesión para enviar comentarios.",
-        "please_enter_feedback": "Por favor, ingresa tus comentarios.",
-        "games_won": "Juegos Ganados",
-        "games_lost": "Juegos Perdidos",
-        "wordlist_submitted": "¡Lista de palabras enviada exitosamente!",
-        "wordlist_error": "Error al enviar la lista de palabras. Por favor, intenta de nuevo.",
-        "please_enter_wordlist": "Por favor, ingresa al menos una palabra."
+        "wordlist_submitted": "¡Lista de palabras enviada con éxito!",
+        "wordlist_error": "Error al enviar la lista de palabras. Por favor, intenta nuevamente.",
+        "please_enter_wordlist": "Por favor, ingresa al menos una palabra.",
         // Add more translations as needed
       }
     }
     // Add more languages as needed
   }
 }, function(err, t) {
+  if (err) {
+    console.error('i18next initialization error:', err);
+  }
   updateContent();
 });
 
@@ -152,15 +153,8 @@ languageSelect.addEventListener('change', (event) => {
 // Theme Toggle
 const themeToggleBtn = document.getElementById('theme-toggle');
 themeToggleBtn.addEventListener('click', () => {
-  if (document.body.classList.contains('light-theme')) {
-    document.body.classList.remove('light-theme');
-    document.body.classList.remove('high-contrast-theme');
-  } else if (document.body.classList.contains('high-contrast-theme')) {
-    document.body.classList.remove('high-contrast-theme');
-    document.body.classList.add('dark-theme');
-  } else {
-    document.body.classList.add('light-theme');
-  }
+  document.body.classList.toggle('light-theme');
+  document.body.classList.toggle('high-contrast-theme');
   // Save user preference in localStorage
   const currentTheme = document.body.classList.contains('light-theme') ? 'light' :
                        document.body.classList.contains('high-contrast-theme') ? 'high-contrast' : 'dark';
@@ -204,8 +198,11 @@ async function loadWordList() {
   try {
     const language = i18next.language || 'en';
     const response = await fetch(wordLists[language]);
+    if (!response.ok) {
+      throw new Error(`Failed to load word list for language: ${language}`);
+    }
     const text = await response.text();
-    const wordsArray = text.split('\n').map(word => word.trim().toLowerCase());
+    const wordsArray = text.split('\n').map(word => word.trim().toLowerCase()).filter(word => word.length > 0);
     validWordsSet = new Set(wordsArray);
     console.log('Word list loaded for language:', language);
   } catch (error) {
@@ -411,6 +408,27 @@ function updateBoard() {
   }
 }
 
+function displayAchievements() {
+  if (!userId) return;
+
+  const achievementsList = document.getElementById('achievements-list');
+  achievementsList.innerHTML = '';
+
+  const achievementsRef = database.ref(`users/${userId}/achievements`);
+  achievementsRef.once('value').then(snapshot => {
+    const userAchievements = snapshot.val() || {};
+    achievements.forEach(achievement => {
+      const achiv = document.createElement('div');
+      achiv.classList.add('achievement');
+      achiv.innerHTML = `
+        <img src="icons/${achievement.id}.png" alt="${achievement.name} Icon">
+        <strong>${achievement.name}</strong>: ${achievement.description} - ${userAchievements[achievement.id] ? '✅' : '❌'}
+      `;
+      achievementsList.appendChild(achiv);
+    });
+  });
+}
+
 // Submit guess and update keyboard
 function submitGuess() {
   const gameBoard = document.getElementById('game-board');
@@ -498,7 +516,7 @@ function logResult(won, mode) {
 
   const log = {
     player: playerName,
-    time: new Date().toLocaleString(),
+    time: endTime.toLocaleString(),
     timeTaken: timeTaken, // in seconds
     attempts: guesses.length,
     word: targetWord.toUpperCase(),
@@ -507,7 +525,7 @@ function logResult(won, mode) {
 
   // Save the log to Firebase under the appropriate mode and date
   database.ref(`leaderboard/${mode}/${today}/` + Date.now()).set(log);
-  
+
   // Update user statistics
   updateUserStats(won, guesses.length);
 }
@@ -818,7 +836,7 @@ function updateAchievements() {
           userAchievements[achievement.id] = true;
           alert(`Achievement Unlocked: ${achievement.name} - ${achievement.description}`);
         }
-        if (achievement.id === 'ten_wins' && (userAchievements['ten_wins_count'] || 0) >= 10) {
+        if (achievement.id === 'ten_wins' && userAchievements['ten_wins_count'] >= 10) {
           userAchievements[achievement.id] = true;
           alert(`Achievement Unlocked: ${achievement.name} - ${achievement.description}`);
         }
@@ -893,17 +911,66 @@ function displayProfile() {
   });
 }
 
+// Display Leaderboards
+function displayLeaderboard() {
+  const today = new Date().toLocaleDateString();
+
+  database.ref(`leaderboard/daily/${today}`).once('value', (snapshot) => {
+    displayLeaderboardData(snapshot.val(), 'leaderboard-daily');
+  });
+
+  database.ref(`leaderboard/random/${today}`).once('value', (snapshot) => {
+    displayLeaderboardData(snapshot.val(), 'leaderboard-random');
+  });
+
+  database.ref(`leaderboard/six-letter/${today}`).once('value', (snapshot) => {
+    displayLeaderboardData(snapshot.val(), 'leaderboard-sixLetter');
+  });
+  
+  database.ref(`leaderboard/global/${today}`).once('value', (snapshot) => {
+    displayLeaderboardData(snapshot.val(), 'leaderboard-global');
+  });
+
+  const leaderboardModal = document.getElementById('leaderboard-modal');
+  leaderboardModal.style.display = 'block';
+  leaderboardModal.setAttribute('aria-hidden', 'false');
+}
+
+function displayLeaderboardData(data, elementId) {
+  const leaderboardElement = document.getElementById(elementId);
+  leaderboardElement.innerHTML = '';
+
+  if (!data) {
+    leaderboardElement.innerHTML = `<p>${i18next.t('no_leaderboard_data') || 'No leaderboard data available for today.'}</p>`;
+    return;
+  }
+
+  const leaderboard = Object.values(data).sort((a, b) => a.timeTaken - b.timeTaken);
+  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Time (s)</th><th>Attempts</th><th>Result</th></tr>';
+  leaderboard.forEach((entry, index) => {
+    leaderboardHTML += `<tr>
+      <td>${index + 1}</td>
+      <td>${entry.player}</td>
+      <td>${entry.timeTaken}</td>
+      <td>${entry.attempts}</td>
+      <td>${entry.won ? i18next.t('won') || 'Won' : i18next.t('lost') || 'Lost'}</td>
+    </tr>`;
+  });
+  leaderboardHTML += '</table>';
+  leaderboardElement.innerHTML = leaderboardHTML;
+}
+
 // Add event listeners for buttons
-document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
+document.getElementById('view-leaderboard').addEventListener('click', displayLeaderboard);
 document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
 document.getElementById('feedback-button').addEventListener('click', () => {
   const feedbackModal = document.getElementById('feedback-modal');
   feedbackModal.style.display = 'block';
   feedbackModal.setAttribute('aria-hidden', 'false');
 });
-document.getElementById('submit-feedback-button').addEventListener('click', submitFeedback);
 
 // Feedback Submission Logic
+document.getElementById('submit-feedback-button').addEventListener('click', submitFeedback);
 function submitFeedback() {
   const feedback = document.getElementById('feedback-input').value.trim();
   if (feedback) {
@@ -928,7 +995,7 @@ function submitFeedback() {
   }
 }
 
-// User Authentication Handlers
+// Sign Up/Login Modal Logic
 const authModal = document.getElementById('auth-modal');
 const emailAuthModal = document.getElementById('email-auth-modal');
 
@@ -963,4 +1030,204 @@ document.getElementById('facebook-signin-button').addEventListener('click', () =
   });
 });
 
+// Email Sign-In Button
+document.getElementById('email-signin-button').addEventListener('click', () => {
+  authModal.style.display = 'none';
+  authModal.setAttribute('aria-hidden', 'true');
+  emailAuthModal.style.display = 'block';
+  emailAuthModal.setAttribute('aria-hidden', 'false');
+});
 
+// Email Sign-In Submit
+document.getElementById('email-signin-submit-button').addEventListener('click', () => {
+  const email = document.getElementById('user-email').value.trim();
+  const password = document.getElementById('user-password').value.trim();
+  if (email && password) {
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(error => {
+        console.error('Email Sign-In Error:', error);
+        alert(i18next.t('signin_error') || 'Error signing in. Please check your credentials.');
+      });
+  } else {
+    alert(i18next.t('please_enter_credentials') || 'Please enter both email and password.');
+  }
+});
+
+// Email Sign-Up Button
+document.getElementById('email-signup-button').addEventListener('click', () => {
+  const email = document.getElementById('user-email').value.trim();
+  const password = document.getElementById('user-password').value.trim();
+  if (email && password) {
+    auth.createUserWithEmailAndPassword(email, password)
+      .catch(error => {
+        console.error('Email Sign-Up Error:', error);
+        alert(i18next.t('signup_error') || 'Error signing up. Please try a different email.');
+      });
+  } else {
+    alert(i18next.t('please_enter_credentials') || 'Please enter both email and password.');
+  }
+});
+
+// Profile Modal Trigger (Example: You can add a button to open profile)
+document.getElementById('profile-button')?.addEventListener('click', displayProfile);
+
+// Handle Physical Keyboard Input
+document.addEventListener('keydown', (event) => {
+  const modals = document.querySelectorAll('.modal');
+  let isAnyModalOpen = false;
+
+  modals.forEach((modal) => {
+    if (modal.style.display === 'block') {
+      isAnyModalOpen = true;
+    }
+  });
+
+  if (isAnyModalOpen) {
+    // If an input is focused, let it handle the keypress
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+      return;
+    }
+    return; // Ignore keypresses when any modal is open
+  }
+
+  let key = event.key;
+
+  if (key === 'Backspace' || key === 'Enter' || /^[a-zA-Z]$/.test(key)) {
+    event.preventDefault(); // Prevent default behavior for these keys
+    handleKeyPress(key);
+  }
+});
+
+// Start the game with default mode
+startGame('daily');
+
+// Fetch and display word details (Definitions, Synonyms, etc.)
+async function fetchWordDetails(word) {
+  try {
+    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+    if (!response.ok) {
+      throw new Error('Word details not found');
+    }
+    const data = await response.json();
+    const meanings = data[0].meanings.map(meaning => ({
+      partOfSpeech: meaning.partOfSpeech,
+      definitions: meaning.definitions.map(def => def.definition),
+      synonyms: meaning.synonyms,
+      antonyms: meaning.antonyms,
+    }));
+    return meanings;
+  } catch (error) {
+    console.error('Error fetching word details:', error);
+    throw error;
+  }
+}
+
+// Show Winning Modal with Word Details and Achievements
+function showWinningAnimation() {
+  const winningModal = document.getElementById('winning-modal');
+  winningModal.style.display = 'block';
+  winningModal.setAttribute('aria-hidden', 'false');
+
+  // Fetch and display the word's details
+  fetchWordDetails(targetWord)
+    .then(details => {
+      const definitionDiv = document.getElementById('word-definition');
+      let htmlContent = `<strong>${i18next.t('definition') || 'Definition'}:</strong><br>`;
+      details.forEach(detail => {
+        htmlContent += `<strong>${detail.partOfSpeech}:</strong> ${detail.definitions.join(', ')}<br>`;
+        if (detail.synonyms && detail.synonyms.length > 0) {
+          htmlContent += `<strong>${i18next.t('synonyms') || 'Synonyms'}:</strong> ${detail.synonyms.join(', ')}<br>`;
+        }
+        if (detail.antonyms && detail.antonyms.length > 0) {
+          htmlContent += `<strong>${i18next.t('antonyms') || 'Antonyms'}:</strong> ${detail.antonyms.join(', ')}<br>`;
+        }
+      });
+      definitionDiv.innerHTML = htmlContent;
+    })
+    .catch(error => {
+      const definitionDiv = document.getElementById('word-definition');
+      definitionDiv.innerHTML = `<strong>${i18next.t('definition') || 'Definition'}:</strong> ${i18next.t('not_found') || 'Not found.'}`;
+      console.error('Error fetching word details:', error);
+    });
+
+  // Confetti animation using canvas (this part was already completed earlier)
+}
+
+// Fetch word details from the dictionary API
+async function fetchWordDetails(word) {
+  try {
+    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+    if (!response.ok) {
+      throw new Error('Word details not found');
+    }
+    const data = await response.json();
+    const meanings = data[0].meanings.map(meaning => ({
+      partOfSpeech: meaning.partOfSpeech,
+      definitions: meaning.definitions.map(def => def.definition),
+      synonyms: meaning.synonyms,
+      antonyms: meaning.antonyms,
+    }));
+    return meanings;
+  } catch (error) {
+    console.error('Error fetching word details:', error);
+    throw error;
+  }
+}
+
+// Close modals when the close button is clicked
+document.querySelectorAll('.modal .close').forEach(closeBtn => {
+  closeBtn.onclick = function () {
+    const modal = this.closest('.modal');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  };
+});
+
+// Ensure that all the required modals can be closed and opened appropriately
+document.getElementById('close-winning-modal').addEventListener('click', () => {
+  const winningModal = document.getElementById('winning-modal');
+  winningModal.style.display = 'none';
+  winningModal.setAttribute('aria-hidden', 'true');
+});
+
+// Load initial game state
+startGame('daily');
+
+// Optional: Automatically focus input fields when certain modals are opened, like the name modal or login modal
+document.getElementById('save-name-button').addEventListener('click', () => {
+  const nameModal = document.getElementById('name-modal');
+  const playerNameInput = document.getElementById('player-name-input');
+  playerName = playerNameInput.value.trim();
+
+  if (playerName) {
+    localStorage.setItem('playerName', playerName);
+    nameModal.style.display = 'none';
+    nameModal.setAttribute('aria-hidden', 'true');
+    startGame(currentMode); // Restart the game after name is set
+  } else {
+    alert(i18next.t('please_enter_name') || 'Please enter your name.');
+  }
+});
+
+// Ensure modals like feedback, profile, and leaderboard can be opened and closed
+document.getElementById('feedback-button').addEventListener('click', () => {
+  const feedbackModal = document.getElementById('feedback-modal');
+  feedbackModal.style.display = 'block';
+  feedbackModal.setAttribute('aria-hidden', 'false');
+});
+
+document.getElementById('leaderboard-modal-close').addEventListener('click', () => {
+  const leaderboardModal = document.getElementById('leaderboard-modal');
+  leaderboardModal.style.display = 'none';
+  leaderboardModal.setAttribute('aria-hidden', 'true');
+});
+
+// Add keyboard event listener for physical keyboard presses
+document.addEventListener('keydown', (event) => {
+  const key = event.key.toLowerCase();
+  if (gameActive && /^[a-z]$/.test(key)) {
+    handleKeyPress(key);
+  } else if (key === 'enter' || key === 'backspace') {
+    handleKeyPress(key);
+  }
+});
