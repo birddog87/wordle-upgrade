@@ -1049,6 +1049,13 @@ document.getElementById('email-signin-submit-button').addEventListener('click', 
   const password = document.getElementById('user-password').value.trim();
   if (email && password) {
     auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        // Success: Close the email auth modal
+        emailAuthModal.style.display = 'none';
+        emailAuthModal.setAttribute('aria-hidden', 'true');
+        authModal.style.display = 'none';
+        authModal.setAttribute('aria-hidden', 'true');
+      })
       .catch(error => {
         console.error('Email Sign-In Error:', error);
         alert(i18next.t('signin_error') || 'Error signing in. Please check your credentials.');
@@ -1064,6 +1071,13 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
   const password = document.getElementById('user-password').value.trim();
   if (email && password) {
     auth.createUserWithEmailAndPassword(email, password)
+      .then(() => {
+        // Success: Close the email auth modal
+        emailAuthModal.style.display = 'none';
+        emailAuthModal.setAttribute('aria-hidden', 'true');
+        authModal.style.display = 'none';
+        authModal.setAttribute('aria-hidden', 'true');
+      })
       .catch(error => {
         console.error('Email Sign-Up Error:', error);
         alert(i18next.t('signup_error') || 'Error signing up. Please try a different email.');
@@ -1073,35 +1087,32 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
   }
 });
 
+
 // Profile Modal Trigger (Example: You can add a button to open profile)
 document.getElementById('profile-button')?.addEventListener('click', displayProfile);
 
 // Handle Physical Keyboard Input
 document.addEventListener('keydown', (event) => {
-  const modals = document.querySelectorAll('.modal');
-  let isAnyModalOpen = false;
+    // Check if modals are open and skip if any modal is open
+    const modals = document.querySelectorAll('.modal');
+    let isAnyModalOpen = false;
 
-  modals.forEach((modal) => {
-    if (modal.style.display === 'block') {
-      isAnyModalOpen = true;
+    modals.forEach((modal) => {
+        if (modal.style.display === 'block') {
+            isAnyModalOpen = true;
+        }
+    });
+
+    if (isAnyModalOpen) return;
+
+    const key = event.key;
+
+    // Only allow a single character or Backspace/Enter
+    if (key === 'Backspace' || key === 'Enter' || /^[a-zA-Z]$/.test(key)) {
+        handleKeyPress(key.toLowerCase());
     }
-  });
-
-  if (isAnyModalOpen) {
-    // If an input is focused, let it handle the keypress
-    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
-      return;
-    }
-    return; // Ignore keypresses when any modal is open
-  }
-
-  let key = event.key;
-
-  if (key === 'Backspace' || key === 'Enter' || /^[a-zA-Z]$/.test(key)) {
-    event.preventDefault(); // Prevent default behavior for these keys
-    handleKeyPress(key);
-  }
 });
+
 
 // Start the game with default mode
 startGame('daily');
@@ -1126,12 +1137,6 @@ async function fetchWordDetails(word) {
     throw error;
   }
 }
-
-// Show Winning Modal with Word Details and Achievements
-function showWinningAnimation() {
-  const winningModal = document.getElementById('winning-modal');
-  winningModal.style.display = 'block';
-  winningModal.setAttribute('aria-hidden', 'false');
 
   // Fetch and display the word's details
   fetchWordDetails(targetWord)
@@ -1227,12 +1232,3 @@ document.getElementById('leaderboard-modal-close').addEventListener('click', () 
   leaderboardModal.setAttribute('aria-hidden', 'true');
 });
 
-// Add keyboard event listener for physical keyboard presses
-document.addEventListener('keydown', (event) => {
-  const key = event.key.toLowerCase();
-  if (gameActive && /^[a-z]$/.test(key)) {
-    handleKeyPress(key);
-  } else if (key === 'enter' || key === 'backspace') {
-    handleKeyPress(key);
-  }
-});
