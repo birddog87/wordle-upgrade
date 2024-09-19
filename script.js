@@ -1117,27 +1117,6 @@ document.addEventListener('keydown', (event) => {
 // Start the game with default mode
 startGame('daily');
 
-// Fetch and display word details (Definitions, Synonyms, etc.)
-async function fetchWordDetails(word) {
-  try {
-    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-    if (!response.ok) {
-      throw new Error('Word details not found');
-    }
-    const data = await response.json();
-    const meanings = data[0].meanings.map(meaning => ({
-      partOfSpeech: meaning.partOfSpeech,
-      definitions: meaning.definitions.map(def => def.definition),
-      synonyms: meaning.synonyms,
-      antonyms: meaning.antonyms,
-    }));
-    return meanings;
-  } catch (error) {
-    console.error('Error fetching word details:', error);
-    throw error;
-  }
-}
-
   // Fetch and display the word's details
   fetchWordDetails(targetWord)
     .then(details => {
@@ -1161,7 +1140,7 @@ async function fetchWordDetails(word) {
     });
 
   // Confetti animation using canvas (this part was already completed earlier)
-}
+
 
 // Fetch word details from the dictionary API
 async function fetchWordDetails(word) {
