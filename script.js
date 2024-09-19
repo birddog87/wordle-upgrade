@@ -154,6 +154,17 @@ async function loadWordList() {
   }
 }
 
+// Function to update the mode indicator
+function updateModeIndicator(mode) {
+  const modeIndicator = document.getElementById('mode-indicator');
+  modeIndicator.textContent = `Current Mode: ${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
+}
+
+// Event listeners for mode buttons
+document.getElementById('daily-mode-button').addEventListener('click', () => startGame('daily'));
+document.getElementById('random-mode-button').addEventListener('click', () => startGame('random'));
+document.getElementById('six-letter-mode-button').addEventListener('click', () => startGame('six-letter'));
+
 // Start the game based on mode
 async function startGame(mode) {
   await loadWordList();
@@ -162,6 +173,8 @@ async function startGame(mode) {
   guesses = [];
   startTime = new Date();
   currentMode = mode;
+
+  updateModeIndicator(mode); 
 
   getPlayerName();
 
