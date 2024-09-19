@@ -1,6 +1,6 @@
 // Initialize Firebase (Using your Firebase project's configuration)
 var firebaseConfig = {
-  apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs", // Replace with your actual API key
+  apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs",
   authDomain: "wordle-upgrade-c055f.firebaseapp.com",
   databaseURL: "https://wordle-upgrade-c055f-default-rtdb.firebaseio.com",
   projectId: "wordle-upgrade-c055f",
@@ -15,7 +15,7 @@ var auth = firebase.auth();
 
 // Initialize i18next for Localization (Only English)
 i18next.init({
-  lng: 'en', // default language
+  lng: 'en',
   debug: true,
   resources: {
     en: {
@@ -68,14 +68,12 @@ i18next.init({
         "wordlist_submitted": "Word list submitted successfully!",
         "wordlist_error": "Error submitting word list. Please try again.",
         "please_enter_wordlist": "Please enter at least one word.",
-        // Added missing translation keys
         "signup_error": "Error signing up. Please try a different email.",
         "signin_error": "Error signing in. Please check your credentials.",
         "please_enter_credentials": "Please enter both email and password.",
         "please_enter_feedback": "Please enter your feedback."
       }
     }
-    // Removed all other languages
   }
 }, function(err, t) {
   if (err) {
@@ -92,9 +90,6 @@ function updateContent() {
   });
 }
 
-// Removed Language Selection Elements and Event Listeners since only English is used
-// If you have language selection in your HTML, consider removing it to clean up the UI
-
 // Theme Toggle
 const themeToggleBtn = document.getElementById('theme-toggle');
 themeToggleBtn.addEventListener('click', () => {
@@ -104,6 +99,7 @@ themeToggleBtn.addEventListener('click', () => {
   const currentTheme = document.body.classList.contains('light-theme') ? 'light' :
                        document.body.classList.contains('high-contrast-theme') ? 'high-contrast' : 'dark';
   localStorage.setItem('theme', currentTheme);
+  console.log('Theme toggled:', currentTheme);
 });
 
 // Load saved theme on page load
@@ -114,6 +110,7 @@ window.addEventListener('load', () => {
   } else if (savedTheme === 'high-contrast') {
     document.body.classList.add('high-contrast-theme');
   }
+  console.log('Loaded theme:', savedTheme);
 });
 
 // Variables to store game state
@@ -134,7 +131,6 @@ let userId = null;
 // Load word lists for different languages (Only English)
 const wordLists = {
   en: 'words_en.txt'
-  // Removed other languages
 };
 
 // Load word list based on current language and mode
@@ -158,6 +154,7 @@ async function loadWordList() {
 function updateModeIndicator(mode) {
   const modeIndicator = document.getElementById('mode-indicator');
   modeIndicator.textContent = `Current Mode: ${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
+  console.log('Mode updated:', mode);
 }
 
 // Event listeners for mode buttons
@@ -167,6 +164,7 @@ document.getElementById('six-letter-mode-button').addEventListener('click', () =
 
 // Start the game based on mode
 async function startGame(mode) {
+  console.log('Starting game in mode:', mode);
   await loadWordList();
   gameActive = true;
   currentGuess = '';
@@ -174,29 +172,23 @@ async function startGame(mode) {
   startTime = new Date();
   currentMode = mode;
 
-  updateModeIndicator(mode); 
+  updateModeIndicator(mode);
 
   getPlayerName();
 
   // Set word length and target word based on mode
   if (mode === 'daily') {
     wordLength = 5;
-    const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
-
-    // Use date as seed to select word
-    const today = new Date();
-    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-    const index = seed % wordArray.length;
-    targetWord = wordArray[index];
+    targetWord = getDailyWord();
   } else if (mode === 'random') {
     wordLength = 5;
-    const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
-    targetWord = wordArray[Math.floor(Math.random() * wordArray.length)];
+    targetWord = getRandomWord(wordLength);
   } else if (mode === 'six-letter') {
     wordLength = 6;
-    const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
-    targetWord = wordArray[Math.floor(Math.random() * wordArray.length)];
+    targetWord = getRandomWord(wordLength);
   }
+
+  console.log('Target word:', targetWord);
 
   maxGuesses = 6;
 
@@ -211,6 +203,20 @@ async function startGame(mode) {
 
   // Update game board grid to match word length
   gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
+}
+
+// Function to get a random word
+function getRandomWord(length) {
+  const filteredWords = Array.from(validWordsSet).filter(word => word.length === length);
+  return filteredWords[Math.floor(Math.random() * filteredWords.length)];
+}
+
+// Function to get the daily word
+function getDailyWord() {
+  const today = new Date();
+  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+  const filteredWords = Array.from(validWordsSet).filter(word => word.length === 5);
+  return filteredWords[seed % filteredWords.length];
 }
 
 // Get player's name from Firebase or prompt for it
@@ -258,7 +264,7 @@ function showNameModal() {
       nameModal.setAttribute('aria-hidden', 'true');
       startGame(currentMode); // Restart the game after saving the name
     } else {
-      alert(i18next.t('please_enter_name') || 'Please enter your name.');
+      alert(i18next.t('please_enter_name'));
     }
   };
 }
@@ -286,7 +292,7 @@ function createBoard() {
     gameBoard.appendChild(tile);
   }
 
-  console.log('Game board created with', maxGuesses * wordLength, 'tiles'); // Add this log
+  console.log('Game board created with', maxGuesses * wordLength, 'tiles');
 }
 
 // Create keyboard
@@ -332,6 +338,8 @@ function createKeyboard() {
 function handleKeyPress(key) {
   if (!gameActive) return;
 
+  console.log('Key pressed:', key);
+
   key = key.toLowerCase();
 
   if (key === 'enter') {
@@ -365,38 +373,20 @@ function updateBoard() {
     tileText.textContent = currentGuess[i] ? currentGuess[i].toUpperCase() : '';
     tile.classList.remove('invalid');
   }
-}
 
-// Display Achievements
-function displayAchievements() {
-  if (!userId) return;
-
-  const achievementsList = document.getElementById('achievements-list');
-  achievementsList.innerHTML = '';
-
-  const achievementsRef = database.ref(`users/${userId}/achievements`);
-  achievementsRef.once('value').then(snapshot => {
-    const userAchievements = snapshot.val() || {};
-    achievements.forEach(achievement => {
-      const achiv = document.createElement('div');
-      achiv.classList.add('achievement');
-      achiv.innerHTML = `
-        <img src="icons/${achievement.id}.png" alt="${achievement.name} Icon">
-        <strong>${achievement.name}</strong>: ${achievement.description} - ${userAchievements[achievement.id] ? '✅' : '❌'}
-      `;
-      achievementsList.appendChild(achiv);
-    });
-  });
+  console.log('Board updated. Current guess:', currentGuess);
 }
 
 // Submit guess and update keyboard
 function submitGuess() {
+  console.log('Submitting guess:', currentGuess);
+
   const gameBoard = document.getElementById('game-board');
   const tiles = gameBoard.querySelectorAll('.tile');
   const rowStart = guesses.length * wordLength;
   const guessArray = currentGuess.split('');
   const targetArray = targetWord.split('');
-  const matchedIndices = new Array(wordLength).fill(false); // To track matched positions in target word
+  const matchedIndices = new Array(wordLength).fill(false);
 
   // First pass: Check for correct letters in the correct position (Green)
   for (let i = 0; i < wordLength; i++) {
@@ -453,14 +443,14 @@ function submitGuess() {
     gameActive = false;
     setTimeout(() => {
       showWinningAnimation();
-      logResult(true, currentMode); // Log result by mode
+      logResult(true, currentMode);
       updateAchievements();
     }, 500);
   } else if (guesses.length === maxGuesses) {
     gameActive = false;
     setTimeout(() => {
       alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
-      logResult(false, currentMode); // Log result by mode
+      logResult(false, currentMode);
       updateAchievements();
     }, 500);
   }
@@ -477,7 +467,7 @@ function logResult(won, mode) {
   const log = {
     player: playerName,
     time: endTime.toLocaleString(),
-    timeTaken: timeTaken, // in seconds
+    timeTaken: timeTaken,
     attempts: guesses.length,
     word: targetWord.toUpperCase(),
     won: won,
@@ -523,21 +513,21 @@ function showWinningAnimation() {
   fetchWordDefinition(targetWord)
     .then(details => {
       const definitionDiv = document.getElementById('word-definition');
-      let htmlContent = `<strong>${i18next.t('definition') || 'Definition'}:</strong><br>`;
+      let htmlContent = `<strong>${i18next.t('definition')}:</strong><br>`;
       details.forEach(detail => {
         htmlContent += `<strong>${detail.partOfSpeech}:</strong> ${detail.definitions.join(', ')}<br>`;
         if (detail.synonyms && detail.synonyms.length > 0) {
-          htmlContent += `<strong>${i18next.t('synonyms') || 'Synonyms'}:</strong> ${detail.synonyms.join(', ')}<br>`;
+          htmlContent += `<strong>${i18next.t('synonyms')}:</strong> ${detail.synonyms.join(', ')}<br>`;
         }
         if (detail.antonyms && detail.antonyms.length > 0) {
-          htmlContent += `<strong>${i18next.t('antonyms') || 'Antonyms'}:</strong> ${detail.antonyms.join(', ')}<br>`;
+          htmlContent += `<strong>${i18next.t('antonyms')}:</strong> ${detail.antonyms.join(', ')}<br>`;
         }
       });
       definitionDiv.innerHTML = htmlContent;
     })
     .catch(error => {
       const definitionDiv = document.getElementById('word-definition');
-      definitionDiv.innerHTML = `<strong>${i18next.t('definition') || 'Definition'}:</strong> ${i18next.t('not_found') || 'Not found.'}`;
+      definitionDiv.innerHTML = `<strong>${i18next.t('definition')}:</strong> ${i18next.t('not_found')}`;
       console.error('Error fetching word details:', error);
     });
 
@@ -657,7 +647,7 @@ function displayLeaderboard(data, elementId) {
   leaderboardElement.innerHTML = '';
 
   if (!data) {
-    leaderboardElement.innerHTML = `<p>${i18next.t('no_leaderboard_data') || 'No leaderboard data available for today.'}</p>`;
+    leaderboardElement.innerHTML = `<p>${i18next.t('no_leaderboard_data')}</p>`;
     return;
   }
 
@@ -669,7 +659,7 @@ function displayLeaderboard(data, elementId) {
       <td>${entry.player}</td>
       <td>${entry.timeTaken}</td>
       <td>${entry.attempts}</td>
-      <td>${entry.won ? i18next.t('won') || 'Won' : i18next.t('lost') || 'Lost'}</td>
+      <td>${entry.won ? i18next.t('won') : i18next.t('lost')}</td>
     </tr>`;
   });
   leaderboardHTML += '</table>';
@@ -698,7 +688,7 @@ function suggestNextWord() {
 function showSuggestions() {
   const suggestions = suggestNextWord();
   const suggestionsDiv = document.getElementById('suggestions-list');
-  suggestionsDiv.innerHTML = `<strong>${i18next.t('suggestions') || 'Suggestions'}:</strong> ${suggestions.join(', ')}`;
+  suggestionsDiv.innerHTML = `<strong>${i18next.t('suggestions')}:</strong> ${suggestions.join(', ')}`;
 }
 
 document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
@@ -759,9 +749,9 @@ function displayStatistics() {
         type: 'bar',
         data: {
           labels: [
-            i18next.t('games_played') || 'Games Played',
-            i18next.t('win_percentage') || 'Win Percentage',
-            i18next.t('average_attempts') || 'Average Attempts'
+            i18next.t('games_played'),
+            i18next.t('win_percentage'),
+            i18next.t('average_attempts')
           ],
           datasets: [{
             label: '# of Stats',
@@ -871,8 +861,8 @@ function displayProfile() {
         type: 'pie',
         data: {
           labels: [
-            i18next.t('games_won') || 'Games Won',
-            i18next.t('games_lost') || 'Games Lost'
+            i18next.t('games_won'),
+            i18next.t('games_lost')
           ],
           datasets: [{
             data: [stats.gamesWon, stats.gamesPlayed - stats.gamesWon],
@@ -895,48 +885,6 @@ function displayProfile() {
   });
 }
 
-// Display Leaderboards
-function displayLeaderboard() {
-  const today = new Date().toLocaleDateString();
-
-  // Array of modes to fetch
-  const modes = ['daily', 'random', 'six-letter', 'global'];
-
-  modes.forEach(mode => {
-    database.ref(`leaderboard/${mode}/${today}`).once('value', (snapshot) => {
-      displayLeaderboard(snapshot.val(), `leaderboard-${mode.replace('-', '')}`);
-    });
-  });
-
-  const leaderboardModal = document.getElementById('leaderboard-modal');
-  leaderboardModal.style.display = 'block';
-  leaderboardModal.setAttribute('aria-hidden', 'false');
-}
-
-function displayLeaderboardData(data, elementId) {
-  const leaderboardElement = document.getElementById(elementId);
-  leaderboardElement.innerHTML = '';
-
-  if (!data) {
-    leaderboardElement.innerHTML = `<p>${i18next.t('no_leaderboard_data') || 'No leaderboard data available for today.'}</p>`;
-    return;
-  }
-
-  const leaderboard = Object.values(data).sort((a, b) => a.timeTaken - b.timeTaken);
-  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Time (s)</th><th>Attempts</th><th>Result</th></tr>';
-  leaderboard.forEach((entry, index) => {
-    leaderboardHTML += `<tr>
-      <td>${index + 1}</td>
-      <td>${entry.player}</td>
-      <td>${entry.timeTaken}</td>
-      <td>${entry.attempts}</td>
-      <td>${entry.won ? i18next.t('won') || 'Won' : i18next.t('lost') || 'Lost'}</td>
-    </tr>`;
-  });
-  leaderboardHTML += '</table>';
-  leaderboardElement.innerHTML = leaderboardHTML;
-}
-
 // Add event listeners for tabs
 document.getElementById('view-leaderboard').addEventListener('click', displayLeaderboard);
 document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
@@ -957,18 +905,18 @@ function submitFeedback() {
         feedback: feedback,
         submittedAt: firebase.database.ServerValue.TIMESTAMP,
       }).then(() => {
-        alert(i18next.t('feedback_thank_you') || 'Thank you for your feedback!');
+        alert(i18next.t('feedback_thank_you'));
         document.getElementById('feedback-modal').style.display = 'none';
         document.getElementById('feedback-modal').setAttribute('aria-hidden', 'true');
       }).catch(err => {
         console.error('Error submitting feedback:', err);
-        alert(i18next.t('feedback_error') || 'There was an issue submitting your feedback. Please try again.');
+        alert(i18next.t('feedback_error'));
       });
     } else {
-      alert(i18next.t('feedback_auth_required') || 'Please sign in to submit feedback.');
+      alert(i18next.t('feedback_auth_required'));
     }
   } else {
-    alert(i18next.t('please_enter_feedback') || 'Please enter your feedback.');
+    alert(i18next.t('please_enter_feedback'));
   }
 }
 
@@ -990,9 +938,6 @@ auth.onAuthStateChanged((user) => {
     authModalElement.setAttribute('aria-hidden', 'false');
   }
 });
-
-// Removed Google and Facebook Sign-In
-// All Google and Facebook authentication code has been removed as per the request
 
 // Email Sign-In Button
 document.getElementById('email-signin-button').addEventListener('click', () => {
@@ -1017,10 +962,10 @@ document.getElementById('email-signin-submit-button').addEventListener('click', 
       })
       .catch(error => {
         console.error('Email Sign-In Error:', error);
-        alert(i18next.t('signin_error') || 'Error signing in. Please check your credentials.');
+        alert(i18next.t('signin_error'));
       });
   } else {
-    alert(i18next.t('please_enter_credentials') || 'Please enter both email and password.');
+    alert(i18next.t('please_enter_credentials'));
   }
 });
 
@@ -1039,10 +984,10 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
       })
       .catch(error => {
         console.error('Email Sign-Up Error:', error);
-        alert(i18next.t('signup_error') || 'Error signing up. Please try a different email.');
+        alert(i18next.t('signup_error'));
       });
   } else {
-    alert(i18next.t('please_enter_credentials') || 'Please enter both email and password.');
+    alert(i18next.t('please_enter_credentials'));
   }
 });
 
@@ -1086,7 +1031,7 @@ document.getElementById('save-name-button').addEventListener('click', () => {
     nameModal.setAttribute('aria-hidden', 'true');
     startGame(currentMode); // Restart the game after name is set
   } else {
-    alert(i18next.t('please_enter_name') || 'Please enter your name.');
+    alert(i18next.t('please_enter_name'));
   }
 });
 
@@ -1108,4 +1053,10 @@ document.getElementById('close-winning-modal').addEventListener('click', () => {
   const winningModal = document.getElementById('winning-modal');
   winningModal.style.display = 'none';
   winningModal.setAttribute('aria-hidden', 'true');
+});
+
+// Initialize the game
+window.addEventListener('load', () => {
+  console.log('Page loaded, initializing game');
+  startGame('daily');
 });
