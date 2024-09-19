@@ -68,7 +68,11 @@ i18next.init({
         "wordlist_submitted": "Word list submitted successfully!",
         "wordlist_error": "Error submitting word list. Please try again.",
         "please_enter_wordlist": "Please enter at least one word.",
-        // Add more translations as needed
+        // Added missing translation keys
+        "signup_error": "Error signing up. Please try a different email.",
+        "signin_error": "Error signing in. Please check your credentials.",
+        "please_enter_credentials": "Please enter both email and password.",
+        "please_enter_feedback": "Please enter your feedback."
       }
     },
     es: {
@@ -121,7 +125,11 @@ i18next.init({
         "wordlist_submitted": "¡Lista de palabras enviada con éxito!",
         "wordlist_error": "Error al enviar la lista de palabras. Por favor, intenta nuevamente.",
         "please_enter_wordlist": "Por favor, ingresa al menos una palabra.",
-        // Add more translations as needed
+        // Added missing translation keys
+        "signup_error": "Error al registrarse. Por favor, intenta con un correo diferente.",
+        "signin_error": "Error al iniciar sesión. Por favor, verifica tus credenciales.",
+        "please_enter_credentials": "Por favor, ingresa tanto el correo como la contraseña.",
+        "please_enter_feedback": "Por favor, ingresa tus comentarios."
       }
     }
     // Add more languages as needed
@@ -309,7 +317,7 @@ function showNameModal() {
 // Close modals
 document.querySelectorAll('.close').forEach(closeBtn => {
   closeBtn.onclick = function () {
-    const modal = this.parentElement.parentElement;
+    const modal = this.closest('.modal');
     modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
   };
@@ -331,7 +339,6 @@ function createBoard() {
 
   console.log('Game board created with', maxGuesses * wordLength, 'tiles'); // Add this log
 }
-
 
 // Create keyboard
 function createKeyboard() {
@@ -411,6 +418,7 @@ function updateBoard() {
   }
 }
 
+// Display Achievements
 function displayAchievements() {
   if (!userId) return;
 
@@ -527,7 +535,11 @@ function logResult(won, mode) {
   };
 
   // Save the log to Firebase under the appropriate mode and date
-  database.ref(`leaderboard/${mode}/${today}/` + Date.now()).set(log);
+  database.ref(`leaderboard/${mode}/${today}/` + Date.now()).set(log)
+    .catch(error => {
+      console.error('Error writing to leaderboard:', error);
+      alert('Unable to log your game result. Please try again later.');
+    });
 
   // Update user statistics
   updateUserStats(won, guesses.length);
@@ -560,14 +572,24 @@ function showWinningAnimation() {
 
   // Fetch and display the word's definition
   fetchWordDefinition(targetWord)
-    .then(definition => {
+    .then(details => {
       const definitionDiv = document.getElementById('word-definition');
-      definitionDiv.innerHTML = `<strong>${i18next.t('definition') || 'Definition'}:</strong> ${definition}`;
+      let htmlContent = `<strong>${i18next.t('definition') || 'Definition'}:</strong><br>`;
+      details.forEach(detail => {
+        htmlContent += `<strong>${detail.partOfSpeech}:</strong> ${detail.definitions.join(', ')}<br>`;
+        if (detail.synonyms && detail.synonyms.length > 0) {
+          htmlContent += `<strong>${i18next.t('synonyms') || 'Synonyms'}:</strong> ${detail.synonyms.join(', ')}<br>`;
+        }
+        if (detail.antonyms && detail.antonyms.length > 0) {
+          htmlContent += `<strong>${i18next.t('antonyms') || 'Antonyms'}:</strong> ${detail.antonyms.join(', ')}<br>`;
+        }
+      });
+      definitionDiv.innerHTML = htmlContent;
     })
     .catch(error => {
       const definitionDiv = document.getElementById('word-definition');
       definitionDiv.innerHTML = `<strong>${i18next.t('definition') || 'Definition'}:</strong> ${i18next.t('not_found') || 'Not found.'}`;
-      console.error('Error fetching definition:', error);
+      console.error('Error fetching word details:', error);
     });
 
   // Confetti animation using canvas
@@ -623,14 +645,24 @@ async function fetchWordDefinition(word) {
   try {
     const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
     if (!response.ok) {
-      throw new Error('Definition not found');
+      throw new Error('Word details not found');
     }
     const data = await response.json();
-    const definition = data[0].meanings[0].definitions[0].definition;
-    return definition;
+    const meanings = data[0].meanings.map(meaning => ({
+      partOfSpeech: meaning.partOfSpeech,
+      definitions: meaning.definitions.map(def => def.definition),
+      synonyms: meaning.synonyms,
+      antonyms: meaning.antonyms,
+    }));
+    return meanings;
   } catch (error) {
-    console.error('Error fetching word definition:', error);
-    throw error;
+    console.error('Error fetching word details:', error);
+    return [{
+      partOfSpeech: 'N/A',
+      definitions: ['Details not available.'],
+      synonyms: [],
+      antonyms: [],
+    }];
   }
 }
 
@@ -657,20 +689,13 @@ document.getElementById('daily-tab').click(); // Default to open Daily tab
 function viewLeaderboard() {
   const today = new Date().toLocaleDateString();
 
-  database.ref(`leaderboard/daily/${today}`).once('value', (snapshot) => {
-    displayLeaderboard(snapshot.val(), 'leaderboard-daily');
-  });
+  // Array of modes to fetch
+  const modes = ['daily', 'random', 'six-letter', 'global'];
 
-  database.ref(`leaderboard/random/${today}`).once('value', (snapshot) => {
-    displayLeaderboard(snapshot.val(), 'leaderboard-random');
-  });
-
-  database.ref(`leaderboard/six-letter/${today}`).once('value', (snapshot) => {
-    displayLeaderboard(snapshot.val(), 'leaderboard-sixLetter');
-  });
-  
-  database.ref(`leaderboard/global/${today}`).once('value', (snapshot) => {
-    displayLeaderboard(snapshot.val(), 'leaderboard-global');
+  modes.forEach(mode => {
+    database.ref(`leaderboard/${mode}/${today}`).once('value', (snapshot) => {
+      displayLeaderboard(snapshot.val(), `leaderboard-${mode.replace('-', '')}`);
+    });
   });
 
   const leaderboardModal = document.getElementById('leaderboard-modal');
@@ -784,7 +809,11 @@ function displayStatistics() {
       new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: [i18next.t('games_played') || 'Games Played', i18next.t('win_percentage') || 'Win Percentage', i18next.t('average_attempts') || 'Average Attempts'],
+          labels: [
+            i18next.t('games_played') || 'Games Played',
+            i18next.t('win_percentage') || 'Win Percentage',
+            i18next.t('average_attempts') || 'Average Attempts'
+          ],
           datasets: [{
             label: '# of Stats',
             data: [gamesPlayed, winPercentage, averageAttempts],
@@ -892,7 +921,10 @@ function displayProfile() {
       new Chart(ctx, {
         type: 'pie',
         data: {
-          labels: [i18next.t('games_won') || 'Games Won', i18next.t('games_lost') || 'Games Lost'],
+          labels: [
+            i18next.t('games_won') || 'Games Won',
+            i18next.t('games_lost') || 'Games Lost'
+          ],
           datasets: [{
             data: [stats.gamesWon, stats.gamesPlayed - stats.gamesWon],
             backgroundColor: [
@@ -918,20 +950,13 @@ function displayProfile() {
 function displayLeaderboard() {
   const today = new Date().toLocaleDateString();
 
-  database.ref(`leaderboard/daily/${today}`).once('value', (snapshot) => {
-    displayLeaderboardData(snapshot.val(), 'leaderboard-daily');
-  });
+  // Array of modes to fetch
+  const modes = ['daily', 'random', 'six-letter', 'global'];
 
-  database.ref(`leaderboard/random/${today}`).once('value', (snapshot) => {
-    displayLeaderboardData(snapshot.val(), 'leaderboard-random');
-  });
-
-  database.ref(`leaderboard/six-letter/${today}`).once('value', (snapshot) => {
-    displayLeaderboardData(snapshot.val(), 'leaderboard-sixLetter');
-  });
-  
-  database.ref(`leaderboard/global/${today}`).once('value', (snapshot) => {
-    displayLeaderboardData(snapshot.val(), 'leaderboard-global');
+  modes.forEach(mode => {
+    database.ref(`leaderboard/${mode}/${today}`).once('value', (snapshot) => {
+      displayLeaderboard(snapshot.val(), `leaderboard-${mode.replace('-', '')}`);
+    });
   });
 
   const leaderboardModal = document.getElementById('leaderboard-modal');
@@ -999,8 +1024,8 @@ function submitFeedback() {
 }
 
 // Sign Up/Login Modal Logic
-const authModal = document.getElementById('auth-modal');
-const emailAuthModal = document.getElementById('email-auth-modal');
+const authModalElement = document.getElementById('auth-modal');
+const emailAuthModalElement = document.getElementById('email-auth-modal');
 
 // Open Authentication Modal on Page Load if Not Authenticated
 auth.onAuthStateChanged((user) => {
@@ -1008,39 +1033,24 @@ auth.onAuthStateChanged((user) => {
     userId = user.uid;
     playerName = user.displayName || user.email;
     localStorage.setItem('playerName', playerName);
-    authModal.style.display = 'none';
-    emailAuthModal.style.display = 'none';
+    authModalElement.style.display = 'none';
+    emailAuthModalElement.style.display = 'none';
     displayStatistics();
   } else {
-    authModal.style.display = 'block';
-    authModal.setAttribute('aria-hidden', 'false');
+    authModalElement.style.display = 'block';
+    authModalElement.setAttribute('aria-hidden', 'false');
   }
 });
 
-// Sign In with Google
-document.getElementById('google-signin-button').addEventListener('click', () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(error => {
-    console.error('Google Sign-In Error:', error.message);
-});
-
-});
-
-// Sign In with Facebook
-document.getElementById('facebook-signin-button').addEventListener('click', () => {
-  const provider = new firebase.auth.FacebookAuthProvider();
-  auth.signInWithPopup(provider).catch(error => {
-    console.error('Facebook Sign-In Error:', error.message);
-});
-
-});
+// Remove Google and Facebook Sign-In
+// Removed Google and Facebook login code as per the request
 
 // Email Sign-In Button
 document.getElementById('email-signin-button').addEventListener('click', () => {
-  authModal.style.display = 'none';
-  authModal.setAttribute('aria-hidden', 'true');
-  emailAuthModal.style.display = 'block';
-  emailAuthModal.setAttribute('aria-hidden', 'false');
+  authModalElement.style.display = 'none';
+  authModalElement.setAttribute('aria-hidden', 'true');
+  emailAuthModalElement.style.display = 'block';
+  emailAuthModalElement.setAttribute('aria-hidden', 'false');
 });
 
 // Email Sign-In Submit
@@ -1051,10 +1061,10 @@ document.getElementById('email-signin-submit-button').addEventListener('click', 
     auth.signInWithEmailAndPassword(email, password)
       .then(() => {
         // Success: Close the email auth modal
-        emailAuthModal.style.display = 'none';
-        emailAuthModal.setAttribute('aria-hidden', 'true');
-        authModal.style.display = 'none';
-        authModal.setAttribute('aria-hidden', 'true');
+        emailAuthModalElement.style.display = 'none';
+        emailAuthModalElement.setAttribute('aria-hidden', 'true');
+        authModalElement.style.display = 'none';
+        authModalElement.setAttribute('aria-hidden', 'true');
       })
       .catch(error => {
         console.error('Email Sign-In Error:', error);
@@ -1073,10 +1083,10 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
     auth.createUserWithEmailAndPassword(email, password)
       .then(() => {
         // Success: Close the email auth modal
-        emailAuthModal.style.display = 'none';
-        emailAuthModal.setAttribute('aria-hidden', 'true');
-        authModal.style.display = 'none';
-        authModal.setAttribute('aria-hidden', 'true');
+        emailAuthModalElement.style.display = 'none';
+        emailAuthModalElement.setAttribute('aria-hidden', 'true');
+        authModalElement.style.display = 'none';
+        authModalElement.setAttribute('aria-hidden', 'true');
       })
       .catch(error => {
         console.error('Email Sign-Up Error:', error);
@@ -1087,99 +1097,32 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
   }
 });
 
-
 // Profile Modal Trigger (Example: You can add a button to open profile)
 document.getElementById('profile-button')?.addEventListener('click', displayProfile);
 
 // Handle Physical Keyboard Input
 document.addEventListener('keydown', (event) => {
-    // Check if modals are open and skip if any modal is open
-    const modals = document.querySelectorAll('.modal');
-    let isAnyModalOpen = false;
+  // Check if modals are open and skip if any modal is open
+  const modals = document.querySelectorAll('.modal');
+  let isAnyModalOpen = false;
 
-    modals.forEach((modal) => {
-        if (modal.style.display === 'block') {
-            isAnyModalOpen = true;
-        }
-    });
-
-    if (isAnyModalOpen) return;
-
-    const key = event.key;
-
-    // Only allow a single character or Backspace/Enter
-    if (key === 'Backspace' || key === 'Enter' || /^[a-zA-Z]$/.test(key)) {
-        handleKeyPress(key.toLowerCase());
+  modals.forEach((modal) => {
+    if (modal.style.display === 'block') {
+      isAnyModalOpen = true;
     }
-});
+  });
 
+  if (isAnyModalOpen) return;
+
+  const key = event.key;
+
+  // Only allow a single character or Backspace/Enter
+  if (key === 'Backspace' || key === 'Enter' || /^[a-zA-Z]$/.test(key)) {
+    handleKeyPress(key.toLowerCase());
+  }
+});
 
 // Start the game with default mode
-startGame('daily');
-
-  // Fetch and display the word's details
-  fetchWordDetails(targetWord)
-    .then(details => {
-      const definitionDiv = document.getElementById('word-definition');
-      let htmlContent = `<strong>${i18next.t('definition') || 'Definition'}:</strong><br>`;
-      details.forEach(detail => {
-        htmlContent += `<strong>${detail.partOfSpeech}:</strong> ${detail.definitions.join(', ')}<br>`;
-        if (detail.synonyms && detail.synonyms.length > 0) {
-          htmlContent += `<strong>${i18next.t('synonyms') || 'Synonyms'}:</strong> ${detail.synonyms.join(', ')}<br>`;
-        }
-        if (detail.antonyms && detail.antonyms.length > 0) {
-          htmlContent += `<strong>${i18next.t('antonyms') || 'Antonyms'}:</strong> ${detail.antonyms.join(', ')}<br>`;
-        }
-      });
-      definitionDiv.innerHTML = htmlContent;
-    })
-    .catch(error => {
-      const definitionDiv = document.getElementById('word-definition');
-      definitionDiv.innerHTML = `<strong>${i18next.t('definition') || 'Definition'}:</strong> ${i18next.t('not_found') || 'Not found.'}`;
-      console.error('Error fetching word details:', error);
-    });
-
-  // Confetti animation using canvas (this part was already completed earlier)
-
-
-// Fetch word details from the dictionary API
-async function fetchWordDetails(word) {
-  try {
-    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-    if (!response.ok) {
-      throw new Error('Word details not found');
-    }
-    const data = await response.json();
-    const meanings = data[0].meanings.map(meaning => ({
-      partOfSpeech: meaning.partOfSpeech,
-      definitions: meaning.definitions.map(def => def.definition),
-      synonyms: meaning.synonyms,
-      antonyms: meaning.antonyms,
-    }));
-    return meanings;
-  } catch (error) {
-    console.error('Error fetching word details:', error);
-    throw error;
-  }
-}
-
-// Close modals when the close button is clicked
-document.querySelectorAll('.modal .close').forEach(closeBtn => {
-  closeBtn.onclick = function () {
-    const modal = this.closest('.modal');
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-  };
-});
-
-// Ensure that all the required modals can be closed and opened appropriately
-document.getElementById('close-winning-modal').addEventListener('click', () => {
-  const winningModal = document.getElementById('winning-modal');
-  winningModal.style.display = 'none';
-  winningModal.setAttribute('aria-hidden', 'true');
-});
-
-// Load initial game state
 startGame('daily');
 
 // Optional: Automatically focus input fields when certain modals are opened, like the name modal or login modal
@@ -1211,3 +1154,9 @@ document.getElementById('leaderboard-modal-close').addEventListener('click', () 
   leaderboardModal.setAttribute('aria-hidden', 'true');
 });
 
+// Ensure that the winning modal can be closed
+document.getElementById('close-winning-modal').addEventListener('click', () => {
+  const winningModal = document.getElementById('winning-modal');
+  winningModal.style.display = 'none';
+  winningModal.setAttribute('aria-hidden', 'true');
+});
