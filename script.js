@@ -92,6 +92,9 @@ function updateContent() {
   });
 }
 
+// Removed Language Selection Elements and Event Listeners since only English is used
+// If you have language selection in your HTML, consider removing it to clean up the UI
+
 // Theme Toggle
 const themeToggleBtn = document.getElementById('theme-toggle');
 themeToggleBtn.addEventListener('click', () => {
@@ -148,7 +151,6 @@ async function loadWordList() {
     console.log('Word list loaded for language:', language);
   } catch (error) {
     console.error('Error loading word list:', error);
-    alert('Failed to load word list. Please try again later.');
   }
 }
 
@@ -168,11 +170,6 @@ async function startGame(mode) {
     wordLength = 5;
     const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
 
-    if (wordArray.length === 0) {
-      alert('No words available for the Daily mode.');
-      return;
-    }
-
     // Use date as seed to select word
     const today = new Date();
     const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
@@ -181,27 +178,11 @@ async function startGame(mode) {
   } else if (mode === 'random') {
     wordLength = 5;
     const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
-
-    if (wordArray.length === 0) {
-      alert('No words available for the Random mode.');
-      return;
-    }
-
     targetWord = wordArray[Math.floor(Math.random() * wordArray.length)];
   } else if (mode === 'six-letter') {
     wordLength = 6;
     const wordArray = Array.from(validWordsSet).filter(word => word.length === wordLength);
-
-    if (wordArray.length === 0) {
-      alert('No words available for the 6-Letter mode.');
-      return;
-    }
-
     targetWord = wordArray[Math.floor(Math.random() * wordArray.length)];
-  } else {
-    console.error('Unknown game mode:', mode);
-    alert('Unknown game mode selected.');
-    return;
   }
 
   maxGuesses = 6;
@@ -217,9 +198,6 @@ async function startGame(mode) {
 
   // Update game board grid to match word length
   gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
-
-  // Provide visual feedback for mode change
-  showModeChangeFeedback(mode);
 }
 
 // Get player's name from Firebase or prompt for it
@@ -258,21 +236,14 @@ function showNameModal() {
         // Save to Firebase
         database.ref(`users/${userId}/profile`).update({
           name: playerName
-        }).then(() => {
-          nameModal.style.display = 'none';
-          nameModal.setAttribute('aria-hidden', 'true');
-          startGame(currentMode); // Restart the game after saving the name
-        }).catch(err => {
-          console.error('Error saving name to Firebase:', err);
-          alert('Failed to save your name. Please try again.');
         });
       } else {
         // Save to localStorage
         localStorage.setItem('playerName', playerName);
-        nameModal.style.display = 'none';
-        nameModal.setAttribute('aria-hidden', 'true');
-        startGame(currentMode); // Restart the game after saving the name
       }
+      nameModal.style.display = 'none';
+      nameModal.setAttribute('aria-hidden', 'true');
+      startGame(currentMode); // Restart the game after saving the name
     } else {
       alert(i18next.t('please_enter_name') || 'Please enter your name.');
     }
@@ -302,7 +273,7 @@ function createBoard() {
     gameBoard.appendChild(tile);
   }
 
-  console.log('Game board created with', maxGuesses * wordLength, 'tiles');
+  console.log('Game board created with', maxGuesses * wordLength, 'tiles'); // Add this log
 }
 
 // Create keyboard
@@ -357,8 +328,6 @@ function handleKeyPress(key) {
       } else {
         showInvalidGuess();
       }
-    } else {
-      alert('Not enough letters.');
     }
   } else if (key === 'backspace') {
     currentGuess = currentGuess.slice(0, -1);
@@ -490,7 +459,7 @@ function submitGuess() {
 function logResult(won, mode) {
   const endTime = new Date();
   const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
-  const today = new Date().toLocaleDateString(); // e.g., "9/19/2024"
+  const today = new Date().toLocaleDateString(); // e.g., "9/17/2024"
 
   const log = {
     player: playerName,
@@ -503,9 +472,6 @@ function logResult(won, mode) {
 
   // Save the log to Firebase under the appropriate mode and date
   database.ref(`leaderboard/${mode}/${today}/` + Date.now()).set(log)
-    .then(() => {
-      console.log('Game result logged successfully.');
-    })
     .catch(error => {
       console.error('Error writing to leaderboard:', error);
       alert('Unable to log your game result. Please try again later.');
@@ -653,34 +619,7 @@ function openLeaderboardTab(tabName) {
   document.getElementById(tabName + '-tab').className += ' active';
 }
 
-// Function to provide visual feedback when mode changes
-function showModeChangeFeedback(mode) {
-  const feedbackDiv = document.getElementById('mode-feedback');
-  if (feedbackDiv) {
-    feedbackDiv.innerText = `Switched to ${i18next.t(`${mode}_mode`) || mode} mode.`;
-    feedbackDiv.style.display = 'block';
-    feedbackDiv.classList.add('fade-in');
-
-    // Hide after 2 seconds
-    setTimeout(() => {
-      feedbackDiv.classList.remove('fade-in');
-      feedbackDiv.style.display = 'none';
-    }, 2000);
-  } else {
-    // If no feedback div exists, create one
-    const newFeedbackDiv = document.createElement('div');
-    newFeedbackDiv.id = 'mode-feedback';
-    newFeedbackDiv.innerText = `Switched to ${i18next.t(`${mode}_mode`) || mode} mode.`;
-    newFeedbackDiv.classList.add('mode-feedback', 'fade-in');
-    document.body.appendChild(newFeedbackDiv);
-
-    // Hide after 2 seconds
-    setTimeout(() => {
-      newFeedbackDiv.classList.remove('fade-in');
-      newFeedbackDiv.style.display = 'none';
-    }, 2000);
-  }
-}
+document.getElementById('daily-tab').click(); // Default to open Daily tab
 
 // View leaderboard data
 function viewLeaderboard() {
@@ -700,7 +639,6 @@ function viewLeaderboard() {
   leaderboardModal.setAttribute('aria-hidden', 'false');
 }
 
-// Display leaderboard data
 function displayLeaderboard(data, elementId) {
   const leaderboardElement = document.getElementById(elementId);
   leaderboardElement.innerHTML = '';
@@ -874,13 +812,8 @@ function updateAchievements() {
       }
     });
 
-    achievementsRef.set(userAchievements)
-      .then(() => {
-        displayAchievements();
-      })
-      .catch(err => {
-        console.error('Error updating achievements:', err);
-      });
+    achievementsRef.set(userAchievements);
+    displayAchievements();
   });
 }
 
@@ -967,8 +900,7 @@ function displayLeaderboard() {
   leaderboardModal.setAttribute('aria-hidden', 'false');
 }
 
-// Display leaderboard data
-function displayLeaderboard(data, elementId) {
+function displayLeaderboardData(data, elementId) {
   const leaderboardElement = document.getElementById(elementId);
   leaderboardElement.innerHTML = '';
 
@@ -992,549 +924,14 @@ function displayLeaderboard(data, elementId) {
   leaderboardElement.innerHTML = leaderboardHTML;
 }
 
-// Add event listeners for mode selection buttons
-document.getElementById('daily-mode-button').addEventListener('click', () => startGame('daily'));
-document.getElementById('random-mode-button').addEventListener('click', () => startGame('random'));
-document.getElementById('six-letter-mode-button').addEventListener('click', () => startGame('six-letter'));
-
-// Suggestions Feature
-function suggestNextWord() {
-  // Simple frequency-based suggestion
-  const letterFrequency = {};
-  validWordsSet.forEach(word => {
-    word.split('').forEach(letter => {
-      letterFrequency[letter] = (letterFrequency[letter] || 0) + 1;
-    });
-  });
-  // Rank words based on cumulative letter frequency
-  const suggestions = Array.from(validWordsSet).sort((a, b) => {
-    const aScore = a.split('').reduce((acc, letter) => acc + (letterFrequency[letter] || 0), 0);
-    const bScore = b.split('').reduce((acc, letter) => acc + (letterFrequency[letter] || 0), 0);
-    return bScore - aScore;
-  });
-  return suggestions.slice(0, 5); // Return top 5 suggestions
-}
-
-// Display Suggestions
-function showSuggestions() {
-  const suggestions = suggestNextWord();
-  const suggestionsDiv = document.getElementById('suggestions-list');
-  suggestionsDiv.innerHTML = `<strong>${i18next.t('suggestions') || 'Suggestions'}:</strong> ${suggestions.join(', ')}`;
-}
-
+// Add event listeners for tabs
+document.getElementById('view-leaderboard').addEventListener('click', displayLeaderboard);
 document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
-
-// Share on Twitter
-document.getElementById('share-button').addEventListener('click', () => {
-  const shareText = `I just played Wordle Upgrade and ${guesses.length <= maxGuesses ? `solved it in ${guesses.length} attempts!` : 'failed to solve it.'} Can you beat me? #WordleUpgrade`;
-  const twitterURL = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-  window.open(twitterURL, '_blank');
+document.getElementById('feedback-button').addEventListener('click', () => {
+  const feedbackModal = document.getElementById('feedback-modal');
+  feedbackModal.style.display = 'block';
+  feedbackModal.setAttribute('aria-hidden', 'false');
 });
-
-// Statistics Tracking
-function updateUserStats(won, attempts) {
-  if (!userId) return; // Only track stats for authenticated users
-
-  const statsRef = database.ref(`users/${userId}/stats`);
-  statsRef.transaction((currentStats) => {
-    if (currentStats === null) {
-      return {
-        gamesPlayed: 1,
-        gamesWon: won ? 1 : 0,
-        currentStreak: won ? 1 : 0,
-        maxStreak: won ? 1 : 0,
-        totalAttempts: won ? attempts : 0,
-      };
-    } else {
-      currentStats.gamesPlayed += 1;
-      if (won) {
-        currentStats.gamesWon += 1;
-        currentStats.currentStreak += 1;
-        if (currentStats.currentStreak > currentStats.maxStreak) {
-          currentStats.maxStreak = currentStats.currentStreak;
-        }
-        currentStats.totalAttempts += attempts;
-      } else {
-        currentStats.currentStreak = 0;
-      }
-      return currentStats;
-    }
-  });
-}
-
-// Display Statistics Chart
-function displayStatistics() {
-  if (!userId) return;
-
-  const statsRef = database.ref(`users/${userId}/stats`);
-  statsRef.once('value').then(snapshot => {
-    const stats = snapshot.val();
-    if (stats) {
-      const gamesPlayed = stats.gamesPlayed;
-      const gamesWon = stats.gamesWon;
-      const winPercentage = gamesPlayed > 0 ? ((gamesWon / gamesPlayed) * 100).toFixed(2) : 0;
-      const averageAttempts = gamesWon > 0 ? (stats.totalAttempts / stats.gamesWon).toFixed(2) : 0;
-
-      const ctx = document.getElementById('stats-chart').getContext('2d');
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: [
-            i18next.t('games_played') || 'Games Played',
-            i18next.t('win_percentage') || 'Win Percentage',
-            i18next.t('average_attempts') || 'Average Attempts'
-          ],
-          datasets: [{
-            label: '# of Stats',
-            data: [gamesPlayed, winPercentage, averageAttempts],
-            backgroundColor: [
-              'rgba(83, 141, 78, 0.6)',
-              'rgba(181, 159, 59, 0.6)',
-              'rgba(58, 58, 60, 0.6)'
-            ],
-            borderColor: [
-              'rgba(83, 141, 78, 1)',
-              'rgba(181, 159, 59, 1)',
-              'rgba(58, 58, 60, 1)'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            yAxes: [{
-              ticks: {
-                beginAtZero: true
-              }
-            }]
-          }
-        }
-      });
-    }
-  });
-}
-
-// Achievements Tracking
-const achievements = [
-  { id: 'first_win', name: 'First Win', description: 'Win your first game!' },
-  { id: 'ten_wins', name: 'Ten Wins', description: 'Win 10 games!' },
-  { id: 'streak_5', name: '5-Day Streak', description: 'Win 5 consecutive games!' },
-  // Add more achievements as needed
-];
-
-function updateAchievements() {
-  if (!userId) return;
-
-  const achievementsRef = database.ref(`users/${userId}/achievements`);
-  achievementsRef.once('value').then(snapshot => {
-    let userAchievements = snapshot.val() || {};
-
-    // Check for each achievement
-    achievements.forEach(achievement => {
-      if (!userAchievements[achievement.id]) {
-        // Define conditions for each achievement
-        if (achievement.id === 'first_win' && guesses.length <= maxGuesses && currentGuess === targetWord) {
-          userAchievements[achievement.id] = true;
-          alert(`Achievement Unlocked: ${achievement.name} - ${achievement.description}`);
-        }
-        if (achievement.id === 'ten_wins' && userAchievements['ten_wins_count'] >= 10) {
-          userAchievements[achievement.id] = true;
-          alert(`Achievement Unlocked: ${achievement.name} - ${achievement.description}`);
-        }
-        // Add more conditions as needed
-      }
-    });
-
-    achievementsRef.set(userAchievements)
-      .then(() => {
-        displayAchievements();
-      })
-      .catch(err => {
-        console.error('Error updating achievements:', err);
-      });
-  });
-}
-
-function displayAchievements() {
-  if (!userId) return;
-
-  const achievementsList = document.getElementById('achievements-list');
-  achievementsList.innerHTML = '';
-
-  const achievementsRef = database.ref(`users/${userId}/achievements`);
-  achievementsRef.once('value').then(snapshot => {
-    const userAchievements = snapshot.val() || {};
-    achievements.forEach(achievement => {
-      const achiv = document.createElement('div');
-      achiv.classList.add('achievement');
-      achiv.innerHTML = `
-        <img src="icons/${achievement.id}.png" alt="${achievement.name} Icon">
-        <strong>${achievement.name}</strong>: ${achievement.description} - ${userAchievements[achievement.id] ? '✅' : '❌'}
-      `;
-      achievementsList.appendChild(achiv);
-    });
-  });
-}
-
-// Display Profile
-function displayProfile() {
-  if (!userId) return;
-
-  const profileModal = document.getElementById('profile-modal');
-  profileModal.style.display = 'block';
-  profileModal.setAttribute('aria-hidden', 'false');
-
-  const profileName = document.getElementById('profile-name');
-  profileName.textContent = `Name: ${playerName}`;
-
-  const statsRef = database.ref(`users/${userId}/stats`);
-  statsRef.once('value').then(snapshot => {
-    const stats = snapshot.val();
-    if (stats) {
-      const ctx = document.getElementById('profile-stats-chart').getContext('2d');
-      new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: [
-            i18next.t('games_won') || 'Games Won',
-            i18next.t('games_lost') || 'Games Lost'
-          ],
-          datasets: [{
-            data: [stats.gamesWon, stats.gamesPlayed - stats.gamesWon],
-            backgroundColor: [
-              'rgba(83, 141, 78, 0.6)',
-              'rgba(58, 58, 60, 0.6)'
-            ],
-            borderColor: [
-              'rgba(83, 141, 78, 1)',
-              'rgba(58, 58, 60, 1)'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true
-        }
-      });
-    }
-  });
-}
-
-// Display Leaderboards
-function displayLeaderboard() {
-  const today = new Date().toLocaleDateString();
-
-  // Array of modes to fetch
-  const modes = ['daily', 'random', 'six-letter', 'global'];
-
-  modes.forEach(mode => {
-    database.ref(`leaderboard/${mode}/${today}`).once('value', (snapshot) => {
-      displayLeaderboard(snapshot.val(), `leaderboard-${mode.replace('-', '')}`);
-    });
-  });
-
-  const leaderboardModal = document.getElementById('leaderboard-modal');
-  leaderboardModal.style.display = 'block';
-  leaderboardModal.setAttribute('aria-hidden', 'false');
-}
-
-// Display leaderboard data
-function displayLeaderboard(data, elementId) {
-  const leaderboardElement = document.getElementById(elementId);
-  leaderboardElement.innerHTML = '';
-
-  if (!data) {
-    leaderboardElement.innerHTML = `<p>${i18next.t('no_leaderboard_data') || 'No leaderboard data available for today.'}</p>`;
-    return;
-  }
-
-  const leaderboard = Object.values(data).sort((a, b) => a.timeTaken - b.timeTaken);
-  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Time (s)</th><th>Attempts</th><th>Result</th></tr>';
-  leaderboard.forEach((entry, index) => {
-    leaderboardHTML += `<tr>
-      <td>${index + 1}</td>
-      <td>${entry.player}</td>
-      <td>${entry.timeTaken}</td>
-      <td>${entry.attempts}</td>
-      <td>${entry.won ? i18next.t('won') || 'Won' : i18next.t('lost') || 'Lost'}</td>
-    </tr>`;
-  });
-  leaderboardHTML += '</table>';
-  leaderboardElement.innerHTML = leaderboardHTML;
-}
-
-// Add event listeners for mode selection buttons
-document.getElementById('daily-mode-button').addEventListener('click', () => startGame('daily'));
-document.getElementById('random-mode-button').addEventListener('click', () => startGame('random'));
-document.getElementById('six-letter-mode-button').addEventListener('click', () => startGame('six-letter'));
-
-// Suggestions Feature
-function suggestNextWord() {
-  // Simple frequency-based suggestion
-  const letterFrequency = {};
-  validWordsSet.forEach(word => {
-    word.split('').forEach(letter => {
-      letterFrequency[letter] = (letterFrequency[letter] || 0) + 1;
-    });
-  });
-  // Rank words based on cumulative letter frequency
-  const suggestions = Array.from(validWordsSet).sort((a, b) => {
-    const aScore = a.split('').reduce((acc, letter) => acc + (letterFrequency[letter] || 0), 0);
-    const bScore = b.split('').reduce((acc, letter) => acc + (letterFrequency[letter] || 0), 0);
-    return bScore - aScore;
-  });
-  return suggestions.slice(0, 5); // Return top 5 suggestions
-}
-
-// Display Suggestions
-function showSuggestions() {
-  const suggestions = suggestNextWord();
-  const suggestionsDiv = document.getElementById('suggestions-list');
-  suggestionsDiv.innerHTML = `<strong>${i18next.t('suggestions') || 'Suggestions'}:</strong> ${suggestions.join(', ')}`;
-}
-
-document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
-
-// Share on Twitter
-document.getElementById('share-button').addEventListener('click', () => {
-  const shareText = `I just played Wordle Upgrade and ${guesses.length <= maxGuesses ? `solved it in ${guesses.length} attempts!` : 'failed to solve it.'} Can you beat me? #WordleUpgrade`;
-  const twitterURL = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-  window.open(twitterURL, '_blank');
-});
-
-// Statistics Tracking
-function updateUserStats(won, attempts) {
-  if (!userId) return; // Only track stats for authenticated users
-
-  const statsRef = database.ref(`users/${userId}/stats`);
-  statsRef.transaction((currentStats) => {
-    if (currentStats === null) {
-      return {
-        gamesPlayed: 1,
-        gamesWon: won ? 1 : 0,
-        currentStreak: won ? 1 : 0,
-        maxStreak: won ? 1 : 0,
-        totalAttempts: won ? attempts : 0,
-      };
-    } else {
-      currentStats.gamesPlayed += 1;
-      if (won) {
-        currentStats.gamesWon += 1;
-        currentStats.currentStreak += 1;
-        if (currentStats.currentStreak > currentStats.maxStreak) {
-          currentStats.maxStreak = currentStats.currentStreak;
-        }
-        currentStats.totalAttempts += attempts;
-      } else {
-        currentStats.currentStreak = 0;
-      }
-      return currentStats;
-    }
-  });
-}
-
-// Display Statistics Chart
-function displayStatistics() {
-  if (!userId) return;
-
-  const statsRef = database.ref(`users/${userId}/stats`);
-  statsRef.once('value').then(snapshot => {
-    const stats = snapshot.val();
-    if (stats) {
-      const gamesPlayed = stats.gamesPlayed;
-      const gamesWon = stats.gamesWon;
-      const winPercentage = gamesPlayed > 0 ? ((gamesWon / gamesPlayed) * 100).toFixed(2) : 0;
-      const averageAttempts = gamesWon > 0 ? (stats.totalAttempts / stats.gamesWon).toFixed(2) : 0;
-
-      const ctx = document.getElementById('stats-chart').getContext('2d');
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: [
-            i18next.t('games_played') || 'Games Played',
-            i18next.t('win_percentage') || 'Win Percentage',
-            i18next.t('average_attempts') || 'Average Attempts'
-          ],
-          datasets: [{
-            label: '# of Stats',
-            data: [gamesPlayed, winPercentage, averageAttempts],
-            backgroundColor: [
-              'rgba(83, 141, 78, 0.6)',
-              'rgba(181, 159, 59, 0.6)',
-              'rgba(58, 58, 60, 0.6)'
-            ],
-            borderColor: [
-              'rgba(83, 141, 78, 1)',
-              'rgba(181, 159, 59, 1)',
-              'rgba(58, 58, 60, 1)'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            yAxes: [{
-              ticks: {
-                beginAtZero: true
-              }
-            }]
-          }
-        }
-      });
-    }
-  });
-}
-
-// Achievements Tracking
-const achievements = [
-  { id: 'first_win', name: 'First Win', description: 'Win your first game!' },
-  { id: 'ten_wins', name: 'Ten Wins', description: 'Win 10 games!' },
-  { id: 'streak_5', name: '5-Day Streak', description: 'Win 5 consecutive games!' },
-  // Add more achievements as needed
-];
-
-function updateAchievements() {
-  if (!userId) return;
-
-  const achievementsRef = database.ref(`users/${userId}/achievements`);
-  achievementsRef.once('value').then(snapshot => {
-    let userAchievements = snapshot.val() || {};
-
-    // Check for each achievement
-    achievements.forEach(achievement => {
-      if (!userAchievements[achievement.id]) {
-        // Define conditions for each achievement
-        if (achievement.id === 'first_win' && guesses.length <= maxGuesses && currentGuess === targetWord) {
-          userAchievements[achievement.id] = true;
-          alert(`Achievement Unlocked: ${achievement.name} - ${achievement.description}`);
-        }
-        if (achievement.id === 'ten_wins' && userAchievements['ten_wins_count'] >= 10) {
-          userAchievements[achievement.id] = true;
-          alert(`Achievement Unlocked: ${achievement.name} - ${achievement.description}`);
-        }
-        // Add more conditions as needed
-      }
-    });
-
-    achievementsRef.set(userAchievements)
-      .then(() => {
-        displayAchievements();
-      })
-      .catch(err => {
-        console.error('Error updating achievements:', err);
-      });
-  });
-}
-
-function displayAchievements() {
-  if (!userId) return;
-
-  const achievementsList = document.getElementById('achievements-list');
-  achievementsList.innerHTML = '';
-
-  const achievementsRef = database.ref(`users/${userId}/achievements`);
-  achievementsRef.once('value').then(snapshot => {
-    const userAchievements = snapshot.val() || {};
-    achievements.forEach(achievement => {
-      const achiv = document.createElement('div');
-      achiv.classList.add('achievement');
-      achiv.innerHTML = `
-        <img src="icons/${achievement.id}.png" alt="${achievement.name} Icon">
-        <strong>${achievement.name}</strong>: ${achievement.description} - ${userAchievements[achievement.id] ? '✅' : '❌'}
-      `;
-      achievementsList.appendChild(achiv);
-    });
-  });
-}
-
-// Display Profile
-function displayProfile() {
-  if (!userId) return;
-
-  const profileModal = document.getElementById('profile-modal');
-  profileModal.style.display = 'block';
-  profileModal.setAttribute('aria-hidden', 'false');
-
-  const profileName = document.getElementById('profile-name');
-  profileName.textContent = `Name: ${playerName}`;
-
-  const statsRef = database.ref(`users/${userId}/stats`);
-  statsRef.once('value').then(snapshot => {
-    const stats = snapshot.val();
-    if (stats) {
-      const ctx = document.getElementById('profile-stats-chart').getContext('2d');
-      new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: [
-            i18next.t('games_won') || 'Games Won',
-            i18next.t('games_lost') || 'Games Lost'
-          ],
-          datasets: [{
-            data: [stats.gamesWon, stats.gamesPlayed - stats.gamesWon],
-            backgroundColor: [
-              'rgba(83, 141, 78, 0.6)',
-              'rgba(58, 58, 60, 0.6)'
-            ],
-            borderColor: [
-              'rgba(83, 141, 78, 1)',
-              'rgba(58, 58, 60, 1)'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true
-        }
-      });
-    }
-  });
-}
-
-// Display Leaderboards
-function displayLeaderboard() {
-  const today = new Date().toLocaleDateString();
-
-  // Array of modes to fetch
-  const modes = ['daily', 'random', 'six-letter', 'global'];
-
-  modes.forEach(mode => {
-    database.ref(`leaderboard/${mode}/${today}`).once('value', (snapshot) => {
-      displayLeaderboard(snapshot.val(), `leaderboard-${mode.replace('-', '')}`);
-    });
-  });
-
-  const leaderboardModal = document.getElementById('leaderboard-modal');
-  leaderboardModal.style.display = 'block';
-  leaderboardModal.setAttribute('aria-hidden', 'false');
-}
-
-// Display leaderboard data
-function displayLeaderboard(data, elementId) {
-  const leaderboardElement = document.getElementById(elementId);
-  leaderboardElement.innerHTML = '';
-
-  if (!data) {
-    leaderboardElement.innerHTML = `<p>${i18next.t('no_leaderboard_data') || 'No leaderboard data available for today.'}</p>`;
-    return;
-  }
-
-  const leaderboard = Object.values(data).sort((a, b) => a.timeTaken - b.timeTaken);
-  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Time (s)</th><th>Attempts</th><th>Result</th></tr>';
-  leaderboard.forEach((entry, index) => {
-    leaderboardHTML += `<tr>
-      <td>${index + 1}</td>
-      <td>${entry.player}</td>
-      <td>${entry.timeTaken}</td>
-      <td>${entry.attempts}</td>
-      <td>${entry.won ? i18next.t('won') || 'Won' : i18next.t('lost') || 'Lost'}</td>
-    </tr>`;
-  });
-  leaderboardHTML += '</table>';
-  leaderboardElement.innerHTML = leaderboardHTML;
-}
 
 // Feedback Submission Logic
 document.getElementById('submit-feedback-button').addEventListener('click', submitFeedback);
@@ -1604,7 +1001,6 @@ document.getElementById('email-signin-submit-button').addEventListener('click', 
         emailAuthModalElement.setAttribute('aria-hidden', 'true');
         authModalElement.style.display = 'none';
         authModalElement.setAttribute('aria-hidden', 'true');
-        displayStatistics();
       })
       .catch(error => {
         console.error('Email Sign-In Error:', error);
