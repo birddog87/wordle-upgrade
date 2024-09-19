@@ -13,7 +13,7 @@ firebase.analytics();
 var database = firebase.database();
 var auth = firebase.auth();
 
-// Initialize i18next for Localization
+// Initialize i18next for Localization (Only English)
 i18next.init({
   lng: 'en', // default language
   debug: true,
@@ -74,65 +74,8 @@ i18next.init({
         "please_enter_credentials": "Please enter both email and password.",
         "please_enter_feedback": "Please enter your feedback."
       }
-    },
-    es: {
-      translation: {
-        "title": "Wordle Mejorado",
-        "daily_mode": "Palabra del Día",
-        "random_mode": "Palabra Aleatoria",
-        "six_letter_mode": "Palabra de 6 Letras",
-        "view_leaderboard": "Ver Tabla de Líderes",
-        "feedback": "Comentarios",
-        "get_suggestions": "Obtener Sugerencias",
-        "statistics": "Tus Estadísticas",
-        "enter_name": "Ingresa Tu Nombre",
-        "save": "Guardar",
-        "leaderboard": "Tabla de Líderes",
-        "daily_word": "Palabra Diaria",
-        "random_word": "Palabra Aleatoria",
-        "six_letter_word": "Palabra de 6 Letras",
-        "global": "Global",
-        "daily_word_leaderboard": "Tabla de Líderes de la Palabra Diaria",
-        "random_word_leaderboard": "Tabla de Líderes de Palabra Aleatoria",
-        "six_letter_word_leaderboard": "Tabla de Líderes de Palabra de 6 Letras",
-        "global_leaderboard": "Tabla de Líderes Global",
-        "congratulations": "¡Felicidades!",
-        "share": "Compartir en Twitter",
-        "close": "Cerrar",
-        "login_signup": "Iniciar Sesión / Registrarse",
-        "email_signin": "Inicio de Sesión por Correo",
-        "signin": "Iniciar Sesión",
-        "signup": "Registrarse",
-        "achievements": "Logros",
-        "profile": "Tu Perfil",
-        "please_enter_name": "Por favor, ingresa tu nombre.",
-        "definition": "Definición",
-        "not_found": "No encontrado.",
-        "won": "Ganó",
-        "lost": "Perdió",
-        "games_played": "Juegos Jugados",
-        "win_percentage": "Porcentaje de Ganadas",
-        "average_attempts": "Intentos Promedio",
-        "games_won": "Juegos Ganados",
-        "games_lost": "Juegos Perdidos",
-        "definitions": "Definiciones",
-        "synonyms": "Sinónimos",
-        "antonyms": "Antónimos",
-        "suggestions": "Sugerencias",
-        "feedback_thank_you": "¡Gracias por tus comentarios!",
-        "feedback_error": "Hubo un problema al enviar tus comentarios. Por favor, intenta nuevamente.",
-        "feedback_auth_required": "Por favor, inicia sesión para enviar comentarios.",
-        "wordlist_submitted": "¡Lista de palabras enviada con éxito!",
-        "wordlist_error": "Error al enviar la lista de palabras. Por favor, intenta nuevamente.",
-        "please_enter_wordlist": "Por favor, ingresa al menos una palabra.",
-        // Added missing translation keys
-        "signup_error": "Error al registrarse. Por favor, intenta con un correo diferente.",
-        "signin_error": "Error al iniciar sesión. Por favor, verifica tus credenciales.",
-        "please_enter_credentials": "Por favor, ingresa tanto el correo como la contraseña.",
-        "please_enter_feedback": "Por favor, ingresa tus comentarios."
-      }
     }
-    // Add more languages as needed
+    // Removed all other languages
   }
 }, function(err, t) {
   if (err) {
@@ -149,14 +92,8 @@ function updateContent() {
   });
 }
 
-// Language Selection
-const languageSelect = document.getElementById('language-select');
-languageSelect.addEventListener('change', (event) => {
-  const selectedLang = event.target.value;
-  i18next.changeLanguage(selectedLang, () => {
-    updateContent();
-  });
-});
+// Removed Language Selection Elements and Event Listeners since only English is used
+// If you have language selection in your HTML, consider removing it to clean up the UI
 
 // Theme Toggle
 const themeToggleBtn = document.getElementById('theme-toggle');
@@ -194,11 +131,10 @@ let currentMode = 'daily'; // Track current game mode
 // User ID for Firebase (after authentication)
 let userId = null;
 
-// Load word lists for different languages
+// Load word lists for different languages (Only English)
 const wordLists = {
-  en: 'words_en.txt',
-  es: 'words_es.txt'
-  // Add more languages and their word lists
+  en: 'words_en.txt'
+  // Removed other languages
 };
 
 // Load word list based on current language and mode
@@ -988,7 +924,7 @@ function displayLeaderboardData(data, elementId) {
   leaderboardElement.innerHTML = leaderboardHTML;
 }
 
-// Add event listeners for buttons
+// Add event listeners for tabs
 document.getElementById('view-leaderboard').addEventListener('click', displayLeaderboard);
 document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
 document.getElementById('feedback-button').addEventListener('click', () => {
@@ -1042,8 +978,8 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
-// Remove Google and Facebook Sign-In
-// Removed Google and Facebook login code as per the request
+// Removed Google and Facebook Sign-In
+// All Google and Facebook authentication code has been removed as per the request
 
 // Email Sign-In Button
 document.getElementById('email-signin-button').addEventListener('click', () => {
