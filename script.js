@@ -5,116 +5,12 @@ var firebaseConfig = {
   databaseURL: "https://wordle-upgrade-c055f-default-rtdb.firebaseio.com",
   projectId: "wordle-upgrade-c055f",
   appId: "1:683362789332:web:e3aeb537a5f96773e85841",
-  // Add other Firebase config parameters as needed
 };
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 firebase.analytics();
 var database = firebase.database();
 var auth = firebase.auth();
-
-// Initialize i18next for Localization (Only English)
-i18next.init({
-  lng: 'en',
-  debug: true,
-  resources: {
-    en: {
-      translation: {
-        "title": "Wordle Upgrade",
-        "daily_mode": "Word of the Day",
-        "random_mode": "Random Word",
-        "six_letter_mode": "6-Letter Word",
-        "view_leaderboard": "View Leaderboard",
-        "feedback": "Feedback",
-        "get_suggestions": "Get Suggestions",
-        "statistics": "Your Statistics",
-        "enter_name": "Enter Your Name",
-        "save": "Save",
-        "leaderboard": "Leaderboard",
-        "daily_word": "Daily Word",
-        "random_word": "Random Word",
-        "six_letter_word": "6-Letter Word",
-        "global": "Global",
-        "daily_word_leaderboard": "Daily Word Leaderboard",
-        "random_word_leaderboard": "Random Word Leaderboard",
-        "six_letter_word_leaderboard": "6-Letter Word Leaderboard",
-        "global_leaderboard": "Global Leaderboard",
-        "congratulations": "Congratulations!",
-        "share": "Share on Twitter",
-        "close": "Close",
-        "login_signup": "Login / Sign Up",
-        "email_signin": "Email Sign-In",
-        "signin": "Sign In",
-        "signup": "Sign Up",
-        "achievements": "Achievements",
-        "profile": "Your Profile",
-        "please_enter_name": "Please enter your name.",
-        "definition": "Definition",
-        "not_found": "Not found.",
-        "won": "Won",
-        "lost": "Lost",
-        "games_played": "Games Played",
-        "win_percentage": "Win Percentage",
-        "average_attempts": "Average Attempts",
-        "games_won": "Games Won",
-        "games_lost": "Games Lost",
-        "definitions": "Definitions",
-        "synonyms": "Synonyms",
-        "antonyms": "Antonyms",
-        "suggestions": "Suggestions",
-        "feedback_thank_you": "Thank you for your feedback!",
-        "feedback_error": "There was an issue submitting your feedback. Please try again.",
-        "feedback_auth_required": "Please sign in to submit feedback.",
-        "wordlist_submitted": "Word list submitted successfully!",
-        "wordlist_error": "Error submitting word list. Please try again.",
-        "please_enter_wordlist": "Please enter at least one word.",
-        "signup_error": "Error signing up. Please try a different email.",
-        "signin_error": "Error signing in. Please check your credentials.",
-        "please_enter_credentials": "Please enter both email and password.",
-        "please_enter_feedback": "Please enter your feedback.",
-        "logout": "Logout",
-        "logged_in_as": "Logged in as: ",
-        "not_logged_in": "Not logged in"
-      }
-    }
-  }
-}, function(err, t) {
-  if (err) {
-    console.error('i18next initialization error:', err);
-  }
-  updateContent();
-});
-
-// Update content based on selected language
-function updateContent() {
-  document.querySelectorAll('[data-i18n]').forEach(function(element) {
-    var key = element.getAttribute('data-i18n');
-    element.innerHTML = i18next.t(key);
-  });
-}
-
-// Theme Toggle
-const themeToggleBtn = document.getElementById('theme-toggle');
-themeToggleBtn.addEventListener('click', () => {
-  document.body.classList.toggle('light-theme');
-  document.body.classList.toggle('high-contrast-theme');
-  // Save user preference in localStorage
-  const currentTheme = document.body.classList.contains('light-theme') ? 'light' :
-                       document.body.classList.contains('high-contrast-theme') ? 'high-contrast' : 'dark';
-  localStorage.setItem('theme', currentTheme);
-  console.log('Theme toggled:', currentTheme);
-});
-
-// Load saved theme on page load
-window.addEventListener('load', () => {
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme === 'light') {
-    document.body.classList.add('light-theme');
-  } else if (savedTheme === 'high-contrast') {
-    document.body.classList.add('high-contrast-theme');
-  }
-  console.log('Loaded theme:', savedTheme);
-});
 
 // Variables to store game state
 let targetWord = '';
@@ -126,28 +22,22 @@ let gameActive = false;
 let startTime;
 let playerName = '';
 let validWordsSet = new Set();
-let currentMode = 'daily'; // Track current game mode
+let currentMode = 'daily';
 
 // User ID for Firebase (after authentication)
 let userId = null;
 
-// Load word lists for different languages (Only English)
-const wordLists = {
-  en: 'words_en.txt'
-};
-
-// Load word list based on current language and mode
+// Load word list
 async function loadWordList() {
   try {
-    const language = i18next.language || 'en';
-    const response = await fetch(wordLists[language]);
+    const response = await fetch('words_en.txt');
     if (!response.ok) {
-      throw new Error(`Failed to load word list for language: ${language}`);
+      throw new Error('Failed to load word list');
     }
     const text = await response.text();
     const wordsArray = text.split('\n').map(word => word.trim().toLowerCase()).filter(word => word.length > 0);
     validWordsSet = new Set(wordsArray);
-    console.log('Word list loaded for language:', language);
+    console.log('Word list loaded');
   } catch (error) {
     console.error('Error loading word list:', error);
   }
@@ -196,15 +86,11 @@ async function startGame(mode) {
   maxGuesses = 6;
 
   // Reset the game board and keyboard
-  const gameBoard = document.getElementById('game-board');
-  gameBoard.innerHTML = '';
   createBoard();
-
-  const keyboard = document.getElementById('keyboard');
-  keyboard.innerHTML = '';
   createKeyboard();
 
   // Update game board grid to match word length
+  const gameBoard = document.getElementById('game-board');
   gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
 }
 
@@ -270,19 +156,10 @@ function showNameModal() {
       updateUserDisplay();
       startGame(currentMode); // Restart the game after saving the name
     } else {
-      alert(i18next.t('please_enter_name'));
+      alert('Please enter your name.');
     }
   };
 }
-
-// Close modals
-document.querySelectorAll('.close').forEach(closeBtn => {
-  closeBtn.onclick = function () {
-    const modal = this.closest('.modal');
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-  };
-});
 
 // Create game board
 function createBoard() {
@@ -519,21 +396,21 @@ function showWinningAnimation() {
   fetchWordDefinition(targetWord)
     .then(details => {
       const definitionDiv = document.getElementById('word-definition');
-      let htmlContent = `<strong>${i18next.t('definition')}:</strong><br>`;
+      let htmlContent = `<strong>Definition:</strong><br>`;
       details.forEach(detail => {
         htmlContent += `<strong>${detail.partOfSpeech}:</strong> ${detail.definitions.join(', ')}<br>`;
         if (detail.synonyms && detail.synonyms.length > 0) {
-          htmlContent += `<strong>${i18next.t('synonyms')}:</strong> ${detail.synonyms.join(', ')}<br>`;
+          htmlContent += `<strong>Synonyms:</strong> ${detail.synonyms.join(', ')}<br>`;
         }
         if (detail.antonyms && detail.antonyms.length > 0) {
-          htmlContent += `<strong>${i18next.t('antonyms')}:</strong> ${detail.antonyms.join(', ')}<br>`;
+          htmlContent += `<strong>Antonyms:</strong> ${detail.antonyms.join(', ')}<br>`;
         }
       });
       definitionDiv.innerHTML = htmlContent;
     })
     .catch(error => {
       const definitionDiv = document.getElementById('word-definition');
-      definitionDiv.innerHTML = `<strong>${i18next.t('definition')}:</strong> ${i18next.t('not_found')}`;
+      definitionDiv.innerHTML = `<strong>Definition:</strong> Not found.`;
       console.error('Error fetching word details:', error);
     });
 
@@ -611,25 +488,6 @@ async function fetchWordDefinition(word) {
   }
 }
 
-// Open leaderboard with tabs
-function openLeaderboardTab(tabName) {
-  const tabcontent = document.getElementsByClassName('tabcontent');
-  const tablinks = document.getElementsByClassName('tablink');
-
-  for (let i = 0; i < tabcontent.length; i++) {
-    tabcontent[i].style.display = 'none';
-  }
-
-  for (let i = 0; i < tablinks.length; i++) {
-    tablinks[i].className = tablinks[i].className.replace(' active', '');
-  }
-
-  document.getElementById(tabName).style.display = 'block';
-  document.getElementById(tabName + '-tab').className += ' active';
-}
-
-document.getElementById('daily-tab').click(); // Default to open Daily tab
-
 // View leaderboard data
 function viewLeaderboard() {
   const today = new Date().toLocaleDateString();
@@ -671,7 +529,7 @@ function displayLeaderboard(data, elementId) {
   leaderboardElement.innerHTML = '';
 
   if (!data) {
-    leaderboardElement.innerHTML = `<p>${i18next.t('no_leaderboard_data')}</p>`;
+    leaderboardElement.innerHTML = `<p>No leaderboard data available for today.</p>`;
     return;
   }
 
@@ -683,7 +541,7 @@ function displayLeaderboard(data, elementId) {
       <td>${entry.player}</td>
       <td>${entry.timeTaken}</td>
       <td>${entry.attempts}</td>
-      <td>${entry.won ? i18next.t('won') : i18next.t('lost')}</td>
+      <td>${entry.won ? 'Won' : 'Lost'}</td>
     </tr>`;
   });
   leaderboardHTML += '</table>';
@@ -712,7 +570,7 @@ function suggestNextWord() {
 function showSuggestions() {
   const suggestions = suggestNextWord();
   const suggestionsDiv = document.getElementById('suggestions-list');
-  suggestionsDiv.innerHTML = `<strong>${i18next.t('suggestions')}:</strong> ${suggestions.join(', ')}`;
+  suggestionsDiv.innerHTML = `<strong>Suggestions:</strong> ${suggestions.join(', ')}`;
 }
 
 document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
@@ -773,9 +631,9 @@ function displayStatistics() {
         type: 'bar',
         data: {
           labels: [
-            i18next.t('games_played'),
-            i18next.t('win_percentage'),
-            i18next.t('average_attempts')
+            'Games Played',
+            'Win Percentage',
+            'Average Attempts'
           ],
           datasets: [{
             label: '# of Stats',
@@ -885,8 +743,8 @@ function displayProfile() {
         type: 'pie',
         data: {
           labels: [
-            i18next.t('games_won'),
-            i18next.t('games_lost')
+            'Games Won',
+            'Games Lost'
           ],
           datasets: [{
             data: [stats.gamesWon, stats.gamesPlayed - stats.gamesWon],
@@ -929,18 +787,18 @@ function submitFeedback() {
         feedback: feedback,
         submittedAt: firebase.database.ServerValue.TIMESTAMP,
       }).then(() => {
-        alert(i18next.t('feedback_thank_you'));
+        alert('Thank you for your feedback!');
         document.getElementById('feedback-modal').style.display = 'none';
         document.getElementById('feedback-modal').setAttribute('aria-hidden', 'true');
       }).catch(err => {
         console.error('Error submitting feedback:', err);
-        alert(i18next.t('feedback_error'));
+        alert('There was an issue submitting your feedback. Please try again.');
       });
     } else {
-      alert(i18next.t('feedback_auth_required'));
+      alert('Please sign in to submit feedback.');
     }
   } else {
-    alert(i18next.t('please_enter_feedback'));
+    alert('Please enter your feedback.');
   }
 }
 
@@ -988,10 +846,10 @@ document.getElementById('email-signin-submit-button').addEventListener('click', 
       })
       .catch(error => {
         console.error('Email Sign-In Error:', error);
-        alert(i18next.t('signin_error'));
+        alert('Error signing in. Please check your credentials.');
       });
   } else {
-    alert(i18next.t('please_enter_credentials'));
+    alert('Please enter both email and password.');
   }
 });
 
@@ -1010,10 +868,10 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
       })
       .catch(error => {
         console.error('Email Sign-Up Error:', error);
-        alert(i18next.t('signup_error'));
+        alert('Error signing up. Please try a different email.');
       });
   } else {
-    alert(i18next.t('please_enter_credentials'));
+    alert('Please enter both email and password.');
   }
 });
 
@@ -1056,10 +914,10 @@ function updateUserDisplay() {
   const logoutButton = document.getElementById('logout-button');
   
   if (userId) {
-    userDisplay.textContent = i18next.t('logged_in_as') + playerName;
+    userDisplay.textContent = 'Logged in as: ' + playerName;
     logoutButton.style.display = 'inline-block';
   } else {
-    userDisplay.textContent = i18next.t('not_logged_in');
+    userDisplay.textContent = 'Not logged in';
     logoutButton.style.display = 'none';
   }
 }
@@ -1105,7 +963,7 @@ document.getElementById('save-name-button').addEventListener('click', () => {
     updateUserDisplay();
     startGame(currentMode); // Restart the game after name is set
   } else {
-    alert(i18next.t('please_enter_name'));
+    alert('Please enter your name.');
   }
 });
 
@@ -1133,4 +991,27 @@ document.getElementById('close-winning-modal').addEventListener('click', () => {
 window.addEventListener('load', () => {
   console.log('Page loaded, initializing game');
   startGame('daily');
+});
+
+// Theme Toggle
+const themeToggleBtn = document.getElementById('theme-toggle');
+themeToggleBtn.addEventListener('click', () => {
+  document.body.classList.toggle('light-theme');
+  document.body.classList.toggle('high-contrast-theme');
+  // Save user preference in localStorage
+  const currentTheme = document.body.classList.contains('light-theme') ? 'light' :
+                       document.body.classList.contains('high-contrast-theme') ? 'high-contrast' : 'dark';
+  localStorage.setItem('theme', currentTheme);
+  console.log('Theme toggled:', currentTheme);
+});
+
+// Load saved theme on page load
+window.addEventListener('load', () => {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-theme');
+  } else if (savedTheme === 'high-contrast') {
+    document.body.classList.add('high-contrast-theme');
+  }
+  console.log('Loaded theme:', savedTheme);
 });
