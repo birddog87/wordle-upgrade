@@ -67,6 +67,8 @@ async function startGame(mode) {
 
   updateModeIndicator(mode);
 
+  getPlayerName();
+
   // Set word length and target word based on mode
   if (mode === 'daily') {
     wordLength = 5;
@@ -79,7 +81,7 @@ async function startGame(mode) {
     targetWord = getRandomWord(wordLength);
   }
 
-  console.log('Game started with a new target word');
+  console.log('Target word:', targetWord);
 
   maxGuesses = 6;
 
@@ -106,6 +108,59 @@ function getDailyWord() {
   return filteredWords[seed % filteredWords.length];
 }
 
+// Get player's name from Firebase or prompt for it
+function getPlayerName() {
+  if (userId) {
+    database.ref(`users/${userId}/profile/name`).once('value').then(snapshot => {
+      playerName = snapshot.val() || '';
+      if (!playerName) {
+        showNameModal();
+      }
+      updateUserDisplay();
+    });
+  } else {
+    // If not authenticated, use localStorage
+    playerName = localStorage.getItem('playerName') || '';
+    if (!playerName) {
+      showNameModal();
+    }
+    updateUserDisplay();
+  }
+}
+
+// Show name entry modal
+function showNameModal() {
+  const nameModal = document.getElementById('name-modal');
+  nameModal.style.display = 'block';
+  nameModal.setAttribute('aria-hidden', 'false');
+
+  // Automatically focus the input field when the modal opens
+  const playerNameInput = document.getElementById('player-name-input');
+  playerNameInput.focus();
+
+  document.getElementById('save-name-button').onclick = function () {
+    const nameInput = playerNameInput;
+    if (nameInput.value.trim()) {
+      playerName = nameInput.value.trim();
+      if (userId) {
+        // Save to Firebase
+        database.ref(`users/${userId}/profile`).update({
+          name: playerName
+        });
+      } else {
+        // Save to localStorage
+        localStorage.setItem('playerName', playerName);
+      }
+      nameModal.style.display = 'none';
+      nameModal.setAttribute('aria-hidden', 'true');
+      updateUserDisplay();
+      startGame(currentMode); // Restart the game after saving the name
+    } else {
+      alert('Please enter your name.');
+    }
+  };
+}
+
 // Create game board
 function createBoard() {
   const gameBoard = document.getElementById('game-board');
@@ -120,7 +175,7 @@ function createBoard() {
     gameBoard.appendChild(tile);
   }
 
-  console.log('Game board created');
+  console.log('Game board created with', maxGuesses * wordLength, 'tiles');
 }
 
 // Create keyboard
@@ -202,12 +257,12 @@ function updateBoard() {
     tile.classList.remove('invalid');
   }
 
-  console.log('Board updated');
+  console.log('Board updated. Current guess:', currentGuess);
 }
 
 // Submit guess and update keyboard
 function submitGuess() {
-  console.log('Submitting guess');
+  console.log('Submitting guess:', currentGuess);
 
   const gameBoard = document.getElementById('game-board');
   const tiles = gameBoard.querySelectorAll('.tile');
@@ -406,6 +461,7 @@ function showWinningAnimation() {
 
   drawConfetti();
 }
+
 // Fetch word definition from dictionary API
 async function fetchWordDefinition(word) {
   try {
@@ -598,9 +654,11 @@ function displayStatistics() {
         options: {
           responsive: true,
           scales: {
-            y: {
-              beginAtZero: true
-            }
+            yAxes: [{
+              ticks: {
+                beginAtZero: true
+              }
+            }]
           }
         }
       });
@@ -817,37 +875,23 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
   }
 });
 
-// Play as Guest
-document.getElementById('play-as-guest').addEventListener('click', () => {
-  showNameModal();
-  authModalElement.style.display = 'none';
-  authModalElement.setAttribute('aria-hidden', 'true');
+// Google Sign-In
+document.getElementById('google-signin-button').addEventListener('click', () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch((error) => {
+    console.error('Google Sign-In Error:', error);
+    alert('Error signing in with Google. Please try again.');
+  });
 });
 
-// Show name entry modal for guest players
-function showNameModal() {
-  const nameModal = document.getElementById('name-modal');
-  nameModal.style.display = 'block';
-  nameModal.setAttribute('aria-hidden', 'false');
-
-  // Automatically focus the input field when the modal opens
-  const playerNameInput = document.getElementById('player-name-input');
-  playerNameInput.focus();
-
-  document.getElementById('save-name-button').onclick = function () {
-    const nameInput = playerNameInput;
-    if (nameInput.value.trim()) {
-      playerName = nameInput.value.trim();
-      localStorage.setItem('playerName', playerName);
-      nameModal.style.display = 'none';
-      nameModal.setAttribute('aria-hidden', 'true');
-      updateUserDisplay();
-      startGame(currentMode); // Start the game after saving the name
-    } else {
-      alert('Please enter your name.');
-    }
-  };
-}
+// Facebook Sign-In
+document.getElementById('facebook-signin-button').addEventListener('click', () => {
+  const provider = new firebase.auth.FacebookAuthProvider();
+  auth.signInWithPopup(provider).catch((error) => {
+    console.error('Facebook Sign-In Error:', error);
+    alert('Error signing in with Facebook. Please try again.');
+  });
+});
 
 // Logout functionality
 document.getElementById('logout-button').addEventListener('click', () => {
@@ -857,8 +901,8 @@ document.getElementById('logout-button').addEventListener('click', () => {
     playerName = '';
     localStorage.removeItem('playerName');
     updateUserDisplay();
-    // Redirect to home page or refresh the game
-    window.location.href = '/';
+    // Optionally, redirect to home page or refresh the game
+    startGame('daily');
   }).catch((error) => {
     console.error('Error signing out:', error);
   });
@@ -869,8 +913,8 @@ function updateUserDisplay() {
   const userDisplay = document.getElementById('user-display');
   const logoutButton = document.getElementById('logout-button');
   
-  if (userId || playerName) {
-    userDisplay.textContent = `Player: ${playerName}`;
+  if (userId) {
+    userDisplay.textContent = 'Logged in as: ' + playerName;
     logoutButton.style.display = 'inline-block';
   } else {
     userDisplay.textContent = 'Not logged in';
@@ -903,6 +947,26 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+// Start the game with default mode
+startGame('daily');
+
+// Optional: Automatically focus input fields when certain modals are opened, like the name modal or login modal
+document.getElementById('save-name-button').addEventListener('click', () => {
+  const nameModal = document.getElementById('name-modal');
+  const playerNameInput = document.getElementById('player-name-input');
+  playerName = playerNameInput.value.trim();
+
+  if (playerName) {
+    localStorage.setItem('playerName', playerName);
+    nameModal.style.display = 'none';
+    nameModal.setAttribute('aria-hidden', 'true');
+    updateUserDisplay();
+    startGame(currentMode); // Restart the game after name is set
+  } else {
+    alert('Please enter your name.');
+  }
+});
+
 // Ensure modals like feedback, profile, and leaderboard can be opened and closed
 document.getElementById('feedback-button').addEventListener('click', () => {
   const feedbackModal = document.getElementById('feedback-modal');
@@ -927,4 +991,27 @@ document.getElementById('close-winning-modal').addEventListener('click', () => {
 window.addEventListener('load', () => {
   console.log('Page loaded, initializing game');
   startGame('daily');
+});
+
+// Theme Toggle
+const themeToggleBtn = document.getElementById('theme-toggle');
+themeToggleBtn.addEventListener('click', () => {
+  document.body.classList.toggle('light-theme');
+  document.body.classList.toggle('high-contrast-theme');
+  // Save user preference in localStorage
+  const currentTheme = document.body.classList.contains('light-theme') ? 'light' :
+                       document.body.classList.contains('high-contrast-theme') ? 'high-contrast' : 'dark';
+  localStorage.setItem('theme', currentTheme);
+  console.log('Theme toggled:', currentTheme);
+});
+
+// Load saved theme on page load
+window.addEventListener('load', () => {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-theme');
+  } else if (savedTheme === 'high-contrast') {
+    document.body.classList.add('high-contrast-theme');
+  }
+  console.log('Loaded theme:', savedTheme);
 });
