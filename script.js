@@ -71,7 +71,10 @@ i18next.init({
         "signup_error": "Error signing up. Please try a different email.",
         "signin_error": "Error signing in. Please check your credentials.",
         "please_enter_credentials": "Please enter both email and password.",
-        "please_enter_feedback": "Please enter your feedback."
+        "please_enter_feedback": "Please enter your feedback.",
+        "logout": "Logout",
+        "logged_in_as": "Logged in as: ",
+        "not_logged_in": "Not logged in"
       }
     }
   }
@@ -227,6 +230,7 @@ function getPlayerName() {
       if (!playerName) {
         showNameModal();
       }
+      updateUserDisplay();
     });
   } else {
     // If not authenticated, use localStorage
@@ -234,6 +238,7 @@ function getPlayerName() {
     if (!playerName) {
       showNameModal();
     }
+    updateUserDisplay();
   }
 }
 
@@ -262,6 +267,7 @@ function showNameModal() {
       }
       nameModal.style.display = 'none';
       nameModal.setAttribute('aria-hidden', 'true');
+      updateUserDisplay();
       startGame(currentMode); // Restart the game after saving the name
     } else {
       alert(i18next.t('please_enter_name'));
@@ -631,19 +637,37 @@ function viewLeaderboard() {
   // Array of modes to fetch
   const modes = ['daily', 'random', 'six-letter', 'global'];
 
+  let leaderboardHTML = '';
+
   modes.forEach(mode => {
-    database.ref(`leaderboard/${mode}/${today}`).once('value', (snapshot) => {
-      displayLeaderboard(snapshot.val(), `leaderboard-${mode.replace('-', '')}`);
-    });
+    leaderboardHTML += `<h3>${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode</h3>`;
+    leaderboardHTML += `<div id="leaderboard-${mode}"></div>`;
   });
 
-  const leaderboardModal = document.getElementById('leaderboard-modal');
-  leaderboardModal.style.display = 'block';
-  leaderboardModal.setAttribute('aria-hidden', 'false');
+  const leaderboardContent = document.getElementById('leaderboard-content');
+  if (leaderboardContent) {
+    leaderboardContent.innerHTML = leaderboardHTML;
+
+    modes.forEach(mode => {
+      database.ref(`leaderboard/${mode}/${today}`).once('value', (snapshot) => {
+        displayLeaderboard(snapshot.val(), `leaderboard-${mode}`);
+      });
+    });
+
+    const leaderboardModal = document.getElementById('leaderboard-modal');
+    leaderboardModal.style.display = 'block';
+    leaderboardModal.setAttribute('aria-hidden', 'false');
+  } else {
+    console.error('Leaderboard content element not found');
+  }
 }
 
 function displayLeaderboard(data, elementId) {
   const leaderboardElement = document.getElementById(elementId);
+  if (!leaderboardElement) {
+    console.error(`Element with id ${elementId} not found`);
+    return;
+  }
   leaderboardElement.innerHTML = '';
 
   if (!data) {
@@ -886,7 +910,7 @@ function displayProfile() {
 }
 
 // Add event listeners for tabs
-document.getElementById('view-leaderboard').addEventListener('click', displayLeaderboard);
+document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
 document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
 document.getElementById('feedback-button').addEventListener('click', () => {
   const feedbackModal = document.getElementById('feedback-modal');
@@ -933,9 +957,11 @@ auth.onAuthStateChanged((user) => {
     authModalElement.style.display = 'none';
     emailAuthModalElement.style.display = 'none';
     displayStatistics();
+    updateUserDisplay();
   } else {
     authModalElement.style.display = 'block';
     authModalElement.setAttribute('aria-hidden', 'false');
+    updateUserDisplay();
   }
 });
 
@@ -991,6 +1017,53 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
   }
 });
 
+// Google Sign-In
+document.getElementById('google-signin-button').addEventListener('click', () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch((error) => {
+    console.error('Google Sign-In Error:', error);
+    alert('Error signing in with Google. Please try again.');
+  });
+});
+
+// Facebook Sign-In
+document.getElementById('facebook-signin-button').addEventListener('click', () => {
+  const provider = new firebase.auth.FacebookAuthProvider();
+  auth.signInWithPopup(provider).catch((error) => {
+    console.error('Facebook Sign-In Error:', error);
+    alert('Error signing in with Facebook. Please try again.');
+  });
+});
+
+// Logout functionality
+document.getElementById('logout-button').addEventListener('click', () => {
+  auth.signOut().then(() => {
+    console.log('User signed out');
+    userId = null;
+    playerName = '';
+    localStorage.removeItem('playerName');
+    updateUserDisplay();
+    // Optionally, redirect to home page or refresh the game
+    startGame('daily');
+  }).catch((error) => {
+    console.error('Error signing out:', error);
+  });
+});
+
+// Function to update user display
+function updateUserDisplay() {
+  const userDisplay = document.getElementById('user-display');
+  const logoutButton = document.getElementById('logout-button');
+  
+  if (userId) {
+    userDisplay.textContent = i18next.t('logged_in_as') + playerName;
+    logoutButton.style.display = 'inline-block';
+  } else {
+    userDisplay.textContent = i18next.t('not_logged_in');
+    logoutButton.style.display = 'none';
+  }
+}
+
 // Profile Modal Trigger (Example: You can add a button to open profile)
 document.getElementById('profile-button')?.addEventListener('click', displayProfile);
 
@@ -1029,6 +1102,7 @@ document.getElementById('save-name-button').addEventListener('click', () => {
     localStorage.setItem('playerName', playerName);
     nameModal.style.display = 'none';
     nameModal.setAttribute('aria-hidden', 'true');
+    updateUserDisplay();
     startGame(currentMode); // Restart the game after name is set
   } else {
     alert(i18next.t('please_enter_name'));
