@@ -616,6 +616,35 @@ document.getElementById('share-button').addEventListener('click', () => {
   window.open(twitterURL, '_blank');
 });
 
+// Share to WhatsApp feature
+document.getElementById('share-whatsapp-button').addEventListener('click', () => {
+  const shareText = generateShareText();
+  const whatsappURL = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+  window.open(whatsappURL, '_blank');
+});
+
+// Generate share text similar to Wordle
+function generateShareText() {
+  let shareText = `Wordle Upgrade - ${currentMode.charAt(0).toUpperCase() + currentMode.slice(1)} Mode\n`;
+  shareText += `${guesses.length}/${maxGuesses}\n\n`;
+
+  guesses.forEach(guess => {
+    let rowResult = '';
+    for (let i = 0; i < wordLength; i++) {
+      if (guess[i] === targetWord[i]) {
+        rowResult += '🟩';
+      } else if (targetWord.includes(guess[i])) {
+        rowResult += '🟨';
+      } else {
+        rowResult += '⬛';
+      }
+    }
+    shareText += rowResult + '\n';
+  });
+
+  return shareText;
+}
+
 // Statistics Tracking
 function updateUserStats(won, attempts) {
   if (!userId) return; // Only track stats for authenticated users
@@ -664,35 +693,17 @@ function displayStatistics() {
       new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: [
-            'Games Played',
-            'Win Percentage',
-            'Average Attempts'
-          ],
+          labels: ['Games Played', 'Win %', 'Avg Attempts'],
           datasets: [{
-            label: '# of Stats',
+            label: 'Statistics',
             data: [gamesPlayed, winPercentage, averageAttempts],
-            backgroundColor: [
-              'rgba(83, 141, 78, 0.6)',
-              'rgba(181, 159, 59, 0.6)',
-              'rgba(58, 58, 60, 0.6)'
-            ],
-            borderColor: [
-              'rgba(83, 141, 78, 1)',
-              'rgba(181, 159, 59, 1)',
-              'rgba(58, 58, 60, 1)'
-            ],
-            borderWidth: 1
+            backgroundColor: ['#538D4E', '#B59F3B', '#3A3A3C']
           }]
         },
         options: {
           responsive: true,
           scales: {
-            yAxes: [{
-              ticks: {
-                beginAtZero: true
-              }
-            }]
+            y: { beginAtZero: true }
           }
         }
       });

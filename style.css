@@ -108,19 +108,13 @@ h1, h2, h3 {
 }
 
 .tile.flip {
-  animation: flip 0.6s forwards;
+  animation: flip 0.5s forwards;
 }
 
 @keyframes shake {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  20%, 60% {
-    transform: translateX(-10px);
-  }
-  40%, 80% {
-    transform: translateX(10px);
-  }
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-10px); }
+  40%, 80% { transform: translateX(10px); }
 }
 
 .tile.invalid {
@@ -450,4 +444,28 @@ tr:nth-child(even) {
   #statistics {
     max-width: 100%;
   }
+}
+/* Improved Logout Button */
+.user-display-container button#logout-button {
+  background-color: #3A3A3C;
+  color: #FFFFFF;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.user-display-container button#logout-button:hover {
+  background-color: #5A5A5C;
+}
+/* Leaderboard Modal Responsive Styles */
+#leaderboard-modal .modal-content {
+  overflow-x: auto;
+}
+
+#leaderboard-modal table {
+  width: 100%;
+  min-width: 600px;
 }
