@@ -1,10 +1,10 @@
-// Initialize Firebase (Using your Firebase project's configuration)
+/// Initialize Firebase (Using your Firebase project's configuration)
 var firebaseConfig = {
-  apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs",
-  authDomain: "wordle-upgrade-c055f.firebaseapp.com",
-  databaseURL: "https://wordle-upgrade-c055f-default-rtdb.firebaseio.com",
-  projectId: "wordle-upgrade-c055f",
-  appId: "1:683362789332:web:e3aeb537a5f96773e85841",
+  apiKey: "YOUR_FIREBASE_API_KEY",
+  authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+  databaseURL: "YOUR_FIREBASE_DATABASE_URL",
+  projectId: "YOUR_FIREBASE_PROJECT_ID",
+  appId: "YOUR_FIREBASE_APP_ID",
 };
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
@@ -26,6 +26,9 @@ let currentMode = 'daily';
 
 // User ID for Firebase (after authentication)
 let userId = null;
+
+// Streak Counter
+let currentStreak = 0;
 
 // Load word list
 async function loadWordList() {
@@ -141,7 +144,7 @@ function showNameModal() {
   document.getElementById('save-name-button').onclick = function () {
     const nameInput = playerNameInput;
     if (nameInput.value.trim()) {
-      playerName = nameInput.value.trim();
+      playerName = sanitizeHTML(nameInput.value.trim());
       if (userId) {
         // Save to Firebase
         database.ref(`users/${userId}/profile`).update({
@@ -167,12 +170,17 @@ function createBoard() {
   gameBoard.innerHTML = '';
   gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
 
-  for (let i = 0; i < maxGuesses * wordLength; i++) {
-    const tile = document.createElement('div');
-    tile.classList.add('tile');
-    const tileText = document.createElement('span');
-    tile.appendChild(tileText);
-    gameBoard.appendChild(tile);
+  for (let i = 0; i < maxGuesses; i++) {
+    const row = document.createElement('div');
+    row.classList.add('board-row');
+    for (let j = 0; j < wordLength; j++) {
+      const tile = document.createElement('div');
+      tile.classList.add('tile');
+      tile.setAttribute('data-row', i);
+      tile.setAttribute('data-col', j);
+      row.appendChild(tile);
+    }
+    gameBoard.appendChild(row);
   }
 
   console.log('Game board created with', maxGuesses * wordLength, 'tiles');
@@ -247,14 +255,14 @@ function handleKeyPress(key) {
 // Update game board
 function updateBoard() {
   const gameBoard = document.getElementById('game-board');
-  const tiles = gameBoard.querySelectorAll('.tile');
-  const rowStart = guesses.length * wordLength;
+  const currentRow = gameBoard.children[guesses.length];
+  const tiles = currentRow.querySelectorAll('.tile');
 
   for (let i = 0; i < wordLength; i++) {
-    const tile = tiles[rowStart + i];
-    const tileText = tile.querySelector('span');
-    tileText.textContent = currentGuess[i] ? currentGuess[i].toUpperCase() : '';
+    const tile = tiles[i];
+    tile.textContent = currentGuess[i] ? currentGuess[i].toUpperCase() : '';
     tile.classList.remove('invalid');
+    tile.classList.remove('flip');
   }
 
   console.log('Board updated. Current guess:', currentGuess);
@@ -265,41 +273,34 @@ function submitGuess() {
   console.log('Submitting guess:', currentGuess);
 
   const gameBoard = document.getElementById('game-board');
-  const tiles = gameBoard.querySelectorAll('.tile');
-  const rowStart = guesses.length * wordLength;
+  const currentRow = gameBoard.children[guesses.length];
+  const tiles = currentRow.querySelectorAll('.tile');
   const guessArray = currentGuess.split('');
   const targetArray = targetWord.split('');
   const matchedIndices = new Array(wordLength).fill(false);
+  const animationPromises = [];
 
   // First pass: Check for correct letters in the correct position (Green)
   for (let i = 0; i < wordLength; i++) {
-    const tile = tiles[rowStart + i];
-    const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
-
     if (guessArray[i] === targetArray[i]) {
-      tile.classList.add('correct');
-      if (!keyButton.classList.contains('key-correct')) {
-        keyButton.classList.add('key-correct');
-      }
       matchedIndices[i] = true;
     }
   }
 
   // Second pass: Check for correct letters in the wrong position (Yellow) and incorrect letters (Grey)
   for (let i = 0; i < wordLength; i++) {
-    const tile = tiles[rowStart + i];
+    const tile = tiles[i];
     const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
 
-    if (!tile.classList.contains('correct')) {
-      let found = false;
-      for (let j = 0; j < wordLength; j++) {
-        if (!matchedIndices[j] && guessArray[i] === targetArray[j]) {
-          found = true;
-          matchedIndices[j] = true; // Mark this position as matched
-          break;
+    setTimeout(() => {
+      tile.classList.add('flip');
+
+      if (guessArray[i] === targetArray[i]) {
+        tile.classList.add('correct');
+        if (!keyButton.classList.contains('key-correct')) {
+          keyButton.classList.add('key-correct');
         }
-      }
-      if (found) {
+      } else if (targetArray.includes(guessArray[i]) && !matchedIndices[targetArray.indexOf(guessArray[i])]) {
         tile.classList.add('present');
         if (
           !keyButton.classList.contains('key-correct') &&
@@ -317,28 +318,32 @@ function submitGuess() {
           keyButton.classList.add('key-absent');
         }
       }
+    }, i * 500);
+
+    animationPromises.push(new Promise(resolve => setTimeout(resolve, (i + 1) * 500)));
+  }
+
+  Promise.all(animationPromises).then(() => {
+    guesses.push(currentGuess);
+
+    if (currentGuess === targetWord) {
+      gameActive = false;
+      setTimeout(() => {
+        showWinningAnimation();
+        logResult(true, currentMode);
+        updateAchievements();
+      }, 500);
+    } else if (guesses.length === maxGuesses) {
+      gameActive = false;
+      setTimeout(() => {
+        alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
+        logResult(false, currentMode);
+        updateAchievements();
+      }, 500);
     }
-  }
 
-  guesses.push(currentGuess);
-
-  if (currentGuess === targetWord) {
-    gameActive = false;
-    setTimeout(() => {
-      showWinningAnimation();
-      logResult(true, currentMode);
-      updateAchievements();
-    }, 500);
-  } else if (guesses.length === maxGuesses) {
-    gameActive = false;
-    setTimeout(() => {
-      alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
-      logResult(false, currentMode);
-      updateAchievements();
-    }, 500);
-  }
-
-  currentGuess = '';
+    currentGuess = '';
+  });
 }
 
 // Function to log the result to Firebase
@@ -370,19 +375,17 @@ function logResult(won, mode) {
 // Show invalid guess animation
 function showInvalidGuess() {
   const gameBoard = document.getElementById('game-board');
-  const tiles = gameBoard.querySelectorAll('.tile');
-  const rowStart = guesses.length * wordLength;
+  const currentRow = gameBoard.children[guesses.length];
+  const tiles = currentRow.querySelectorAll('.tile');
 
-  for (let i = 0; i < wordLength; i++) {
-    const tile = tiles[rowStart + i];
+  tiles.forEach(tile => {
     tile.classList.add('invalid');
-  }
+  });
 
   setTimeout(() => {
-    for (let i = 0; i < wordLength; i++) {
-      const tile = tiles[rowStart + i];
+    tiles.forEach(tile => {
       tile.classList.remove('invalid');
-    }
+    });
   }, 500);
 }
 
@@ -392,8 +395,12 @@ function showWinningAnimation() {
   winningModal.style.display = 'block';
   winningModal.setAttribute('aria-hidden', 'false');
 
+  // Display the word in the modal
+  const winningWordDisplay = document.getElementById('winning-word-display');
+  winningWordDisplay.textContent = `You guessed the word: ${targetWord.toUpperCase()}`;
+
   // Fetch and display the word's definition
-   fetchWordDefinition(targetWord)
+  fetchWordDefinition(targetWord)
     .then(details => {
       const definitionDiv = document.getElementById('word-definition');
       let htmlContent = `<strong>Definition:</strong><br>`;
@@ -490,64 +497,51 @@ async function fetchWordDefinition(word) {
 
 // View leaderboard data
 function viewLeaderboard() {
-  const leaderboardContent = document.getElementById('leaderboard-content');
-  if (leaderboardContent) {
-    leaderboardContent.innerHTML = '<h3>Loading leaderboard...</h3>';
+  const leaderboardModal = document.getElementById('leaderboard-modal');
+  leaderboardModal.style.display = 'block';
+  leaderboardModal.setAttribute('aria-hidden', 'false');
 
-    const modes = ['daily', 'random', 'six-letter', 'global'];
-    let leaderboardHTML = '';
+  const tabs = document.querySelectorAll('.tablink');
+  const tabContents = document.querySelectorAll('.tabcontent');
 
-    const promises = modes.map(mode => {
-      return database.ref(`leaderboard/${mode}`).once('value');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      tabContents.forEach(content => content.classList.remove('active'));
+      const activeContent = document.getElementById(tab.getAttribute('data-tab'));
+      activeContent.classList.add('active');
     });
+  });
 
-    Promise.all(promises)
-      .then(snapshots => {
-        snapshots.forEach((snapshot, index) => {
-          const mode = modes[index];
-          leaderboardHTML += `<h3>${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode</h3>`;
-          leaderboardHTML += displayLeaderboard(snapshot.val(), mode);
-        });
+  // Fetch and display leaderboard data for each mode
+  const modes = ['daily', 'random', 'six-letter', 'global'];
 
-        const leaderboardModal = document.getElementById('leaderboard-modal');
-        leaderboardModal.style.display = 'block';
-        leaderboardModal.setAttribute('aria-hidden', 'false');
-        leaderboardModal.querySelector('.modal-content').innerHTML = `
-          <span class="close" id="leaderboard-modal-close" aria-label="Close">&times;</span>
-          <h2 id="leaderboard-modal-title" data-i18n="leaderboard">Leaderboard</h2>
-          <div class="tabs">
-            <button class="tablink" id="daily-tab" onclick="openLeaderboardTab('daily')" data-i18n="daily_word">Daily Word</button>
-            <button class="tablink" id="random-tab" onclick="openLeaderboardTab('random')" data-i18n="random_word">Random Word</button>
-            <button class="tablink" id="sixLetter-tab" onclick="openLeaderboardTab('sixLetter')" data-i18n="six_letter_word">6-Letter Word</button>
-            <button class="tablink" id="global-tab" onclick="openLeaderboardTab('global')" data-i18n="global">Global</button>
-          </div>
-          <div id="daily" class="tabcontent">${displayLeaderboard(snapshots[0].val(), 'daily')}</div>
-          <div id="random" class="tabcontent">${displayLeaderboard(snapshots[1].val(), 'random')}</div>
-          <div id="sixLetter" class="tabcontent">${displayLeaderboard(snapshots[2].val(), 'six-letter')}</div>
-          <div id="global" class="tabcontent">${displayLeaderboard(snapshots[3].val(), 'global')}</div>
-        `;
-      })
-      .catch(error => {
-        console.error('Error fetching leaderboard data:', error);
-        const leaderboardModal = document.getElementById('leaderboard-modal');
-        leaderboardModal.style.display = 'block';
-        leaderboardModal.setAttribute('aria-hidden', 'false');
-        leaderboardModal.querySelector('.modal-content').innerHTML = `
-          <span class="close" id="leaderboard-modal-close" aria-label="Close">&times;</span>
-          <h2 id="leaderboard-modal-title" data-i18n="leaderboard">Leaderboard</h2>
-          <p>Error loading leaderboard. Please try again later.</p>
-        `;
-      });
+  modes.forEach(mode => {
+    const leaderboardDiv = document.getElementById(`leaderboard-${mode.replace('-', '')}`);
+    leaderboardDiv.innerHTML = '<p>Loading...</p>';
+    fetchLeaderboardData(mode, leaderboardDiv);
+  });
 
-    // Reattach close event listener
-    document.getElementById('leaderboard-modal-close').addEventListener('click', () => {
-      const leaderboardModal = document.getElementById('leaderboard-modal');
-      leaderboardModal.style.display = 'none';
-      leaderboardModal.setAttribute('aria-hidden', 'true');
+  // Close event listener
+  document.getElementById('leaderboard-modal-close').addEventListener('click', () => {
+    leaderboardModal.style.display = 'none';
+    leaderboardModal.setAttribute('aria-hidden', 'true');
+  });
+}
+
+function fetchLeaderboardData(mode, container) {
+  database.ref(`leaderboard/${mode}`).once('value')
+    .then(snapshot => {
+      const data = snapshot.val();
+      const leaderboardHTML = displayLeaderboard(data, mode);
+      container.innerHTML = leaderboardHTML;
+    })
+    .catch(error => {
+      console.error('Error fetching leaderboard data:', error);
+      container.innerHTML = '<p>Error loading leaderboard. Please try again later.</p>';
     });
-  } else {
-    console.error('Leaderboard content element not found');
-  }
 }
 
 function displayLeaderboard(data, mode) {
@@ -582,41 +576,14 @@ function displayLeaderboard(data, mode) {
   return leaderboardHTML;
 }
 
-// Suggestions Feature
-function suggestNextWord() {
-  // Simple frequency-based suggestion
-  const letterFrequency = {};
-  validWordsSet.forEach(word => {
-    word.split('').forEach(letter => {
-      letterFrequency[letter] = (letterFrequency[letter] || 0) + 1;
-    });
-  });
-  // Rank words based on cumulative letter frequency
-  const suggestions = Array.from(validWordsSet).sort((a, b) => {
-    const aScore = a.split('').reduce((acc, letter) => acc + (letterFrequency[letter] || 0), 0);
-    const bScore = b.split('').reduce((acc, letter) => acc + (letterFrequency[letter] || 0), 0);
-    return bScore - aScore;
-  });
-  return suggestions.slice(0, 5); // Return top 5 suggestions
-}
-
-// Display Suggestions
-function showSuggestions() {
-  const suggestions = suggestNextWord();
-  const suggestionsDiv = document.getElementById('suggestions-list');
-  suggestionsDiv.innerHTML = `<strong>Suggestions:</strong> ${suggestions.join(', ')}`;
-}
-
-document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
-
 // Share on Twitter
 document.getElementById('share-button').addEventListener('click', () => {
-  const shareText = `I just played Wordle Upgrade and ${guesses.length <= maxGuesses ? `solved it in ${guesses.length} attempts!` : 'failed to solve it.'} Can you beat me? #WordleUpgrade`;
+  const shareText = generateShareText();
   const twitterURL = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
   window.open(twitterURL, '_blank');
 });
 
-// Share to WhatsApp feature
+// Share on WhatsApp
 document.getElementById('share-whatsapp-button').addEventListener('click', () => {
   const shareText = generateShareText();
   const whatsappURL = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
@@ -652,11 +619,12 @@ function updateUserStats(won, attempts) {
   const statsRef = database.ref(`users/${userId}/stats`);
   statsRef.transaction((currentStats) => {
     if (currentStats === null) {
+      currentStreak = won ? 1 : 0;
       return {
         gamesPlayed: 1,
         gamesWon: won ? 1 : 0,
-        currentStreak: won ? 1 : 0,
-        maxStreak: won ? 1 : 0,
+        currentStreak: currentStreak,
+        maxStreak: currentStreak,
         totalAttempts: won ? attempts : 0,
       };
     } else {
@@ -664,15 +632,19 @@ function updateUserStats(won, attempts) {
       if (won) {
         currentStats.gamesWon += 1;
         currentStats.currentStreak += 1;
+        currentStreak = currentStats.currentStreak;
         if (currentStats.currentStreak > currentStats.maxStreak) {
           currentStats.maxStreak = currentStats.currentStreak;
         }
         currentStats.totalAttempts += attempts;
       } else {
         currentStats.currentStreak = 0;
+        currentStreak = 0;
       }
       return currentStats;
     }
+  }).then(() => {
+    document.getElementById('streak-counter').textContent = `Current Streak: ${currentStreak}`;
   });
 }
 
@@ -688,6 +660,9 @@ function displayStatistics() {
       const gamesWon = stats.gamesWon;
       const winPercentage = gamesPlayed > 0 ? ((gamesWon / gamesPlayed) * 100).toFixed(2) : 0;
       const averageAttempts = gamesWon > 0 ? (stats.totalAttempts / stats.gamesWon).toFixed(2) : 0;
+      currentStreak = stats.currentStreak || 0;
+
+      document.getElementById('streak-counter').textContent = `Current Streak: ${currentStreak}`;
 
       const ctx = document.getElementById('stats-chart').getContext('2d');
       new Chart(ctx, {

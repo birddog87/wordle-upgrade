@@ -5,7 +5,6 @@ const urlsToCache = [
   '/style.css',
   '/script.js',
   '/words_en.txt',
-  '/words_es.txt',
   // Add other assets like images, icons, etc.
 ];
 
@@ -22,6 +21,10 @@ self.addEventListener('install', (event) => {
 
 // Fetch assets from cache or network
 self.addEventListener('fetch', (event) => {
+  if (event.request.url.includes('api.dictionaryapi.dev')) {
+    // Don't cache API responses
+    return;
+  }
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
