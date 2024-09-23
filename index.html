@@ -22,52 +22,59 @@
 </head>
 <body>
   <div class="game-container">
-    <h1 data-i18n="title">Wordle Upgrade</h1>
-    
-    <!-- Theme Toggle and Language Selection -->
-    <div class="settings">
-      <button id="theme-toggle" aria-label="Toggle Theme">🌙</button>
-      <select id="language-select" aria-label="Select Language">
-        <option value="en">English</option>
-        <option value="es">Español</option>
-        <!-- Add more languages as needed -->
-      </select>
-    </div>
+    <header>
+      <h1 data-i18n="title">Wordle Upgrade</h1>
+      
+      <!-- Removed Theme Toggle -->
+      
+      <!-- Language Selection -->
+      <div class="settings">
+        <select id="language-select" aria-label="Select Language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <!-- Add more languages as needed -->
+        </select>
+      </div>
+    </header>
     
     <!-- Mode Selection Buttons -->
     <div class="mode-selection">
-      <button id="daily-mode-button" data-i18n="daily_mode">Word of the Day</button>
-      <button id="random-mode-button" data-i18n="random_mode">Random Word</button>
-      <button id="six-letter-mode-button" data-i18n="six_letter_mode">6-Letter Word</button>
-      <button id="view-leaderboard" data-i18n="view_leaderboard">View Leaderboard</button>
-      <button id="feedback-button" data-i18n="feedback">Feedback</button>
+      <button type="button" id="daily-mode-button" data-i18n="daily_mode">Word of the Day</button>
+      <button type="button" id="random-mode-button" data-i18n="random_mode">Random Word</button>
+      <button type="button" id="six-letter-mode-button" data-i18n="six_letter_mode">6-Letter Word</button>
+      <button type="button" id="view-leaderboard" data-i18n="view_leaderboard">View Leaderboard</button>
+      <button type="button" id="feedback-button" data-i18n="feedback">Feedback</button>
     </div>
     
     <div id="mode-indicator">Current Mode: Daily</div>
     <!-- Game Board and Keyboard -->
-    <div id="game-board"></div>
-    <div id="keyboard"></div>
-    
-    <!-- Suggestions Section -->
-    <div id="suggestions">
-      <button id="suggestions-button" data-i18n="get_suggestions">Get Suggestions</button>
-      <div id="suggestions-list"></div>
-    </div>
-    
-    <!-- Statistics Section -->
-    <div id="statistics">
-      <h2 data-i18n="statistics">Your Statistics</h2>
-      <canvas id="stats-chart"></canvas>
-    </div>
+    <main>
+      <div id="game-board"></div>
+      <div id="keyboard"></div>
+      
+      <!-- Suggestions Section -->
+      <div id="suggestions">
+        <button type="button" id="suggestions-button" data-i18n="get_suggestions">Get Suggestions</button>
+        <div id="suggestions-list"></div>
+      </div>
+      
+      <!-- Statistics Section -->
+      <div id="statistics">
+        <h2 data-i18n="statistics">Your Statistics</h2>
+        <canvas id="stats-chart"></canvas>
+      </div>
+    </main>
   </div>
 
+  <!-- Modals -->
   <!-- Name Entry Modal -->
   <div id="name-modal" class="modal" aria-hidden="true">
     <div class="modal-content" role="dialog" aria-labelledby="name-modal-title">
       <span class="close" id="name-modal-close" aria-label="Close">&times;</span>
       <h2 id="name-modal-title" data-i18n="enter_name">Enter Your Name</h2>
+      <label for="player-name-input" data-i18n="player_name">Player Name:</label>
       <input type="text" id="player-name-input" placeholder="Your name" aria-label="Player Name">
-      <button id="save-name-button" data-i18n="save">Save</button>
+      <button type="button" id="save-name-button" data-i18n="save">Save</button>
     </div>
   </div>
 
@@ -114,30 +121,29 @@
       <span class="close" id="feedback-modal-close" aria-label="Close">&times;</span>
       <h2 id="feedback-modal-title" data-i18n="feedback">Feedback</h2>
       <textarea id="feedback-input" placeholder="Your feedback" aria-label="Feedback"></textarea>
-      <button id="submit-feedback-button" data-i18n="submit">Submit</button>
+      <button type="button" id="submit-feedback-button" data-i18n="submit">Submit</button>
     </div>
   </div>
 
   <!-- Winning Options Modal -->
-    <div id="winning-modal" class="modal" aria-hidden="true">
-      <div class="modal-content" role="dialog" aria-labelledby="winning-modal-title">
-        <h2 id="winning-modal-title" data-i18n="congratulations">Congratulations!</h2>
-        <canvas id="confetti-canvas"></canvas>
-        <div id="word-definition"></div>
-        <button id="share-button" data-i18n="share">Share on Twitter</button>
-        <button id="close-winning-modal" data-i18n="close">Close</button>
-      </div>
+  <div id="winning-modal" class="modal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-labelledby="winning-modal-title">
+      <h2 id="winning-modal-title" data-i18n="congratulations">Congratulations!</h2>
+      <canvas id="confetti-canvas"></canvas>
+      <div id="word-definition"></div>
+      <button type="button" id="share-button" data-i18n="share">Share on Twitter</button>
+      <button type="button" id="close-winning-modal" data-i18n="close">Close</button>
     </div>
-
+  </div>
 
   <!-- Sign Up/Login Modal -->
   <div id="auth-modal" class="modal" aria-hidden="true">
     <div class="modal-content" role="dialog" aria-labelledby="auth-modal-title">
       <span class="close" id="auth-modal-close" aria-label="Close">&times;</span>
       <h2 id="auth-modal-title" data-i18n="login_signup">Login / Sign Up</h2>
-      <button id="google-signin-button">Sign in with Google</button>
-      <button id="facebook-signin-button">Sign in with Facebook</button>
-      <button id="email-signin-button">Sign in with Email</button>
+      <button type="button" id="google-signin-button">Sign in with Google</button>
+      <button type="button" id="facebook-signin-button">Sign in with Facebook</button>
+      <button type="button" id="email-signin-button">Sign in with Email</button>
     </div>
   </div>
 
@@ -146,10 +152,12 @@
     <div class="modal-content" role="dialog" aria-labelledby="email-auth-modal-title">
       <span class="close" id="email-auth-modal-close" aria-label="Close">&times;</span>
       <h2 id="email-auth-modal-title" data-i18n="email_signin">Email Sign-In</h2>
+      <label for="user-email" data-i18n="email">Email:</label>
       <input type="email" id="user-email" placeholder="Email" aria-label="Email">
+      <label for="user-password" data-i18n="password">Password:</label>
       <input type="password" id="user-password" placeholder="Password" aria-label="Password">
-      <button id="email-signin-submit-button" data-i18n="signin">Sign In</button>
-      <button id="email-signup-button" data-i18n="signup">Sign Up</button>
+      <button type="button" id="email-signin-submit-button" data-i18n="signin">Sign In</button>
+      <button type="button" id="email-signup-button" data-i18n="signup">Sign Up</button>
     </div>
   </div>
 
@@ -169,8 +177,14 @@
       <h2 id="profile-modal-title" data-i18n="profile">Your Profile</h2>
       <p id="profile-name"></p>
       <canvas id="profile-stats-chart"></canvas>
-      <button id="profile-close-button" data-i18n="close">Close</button>
+      <button type="button" id="profile-close-button" data-i18n="close">Close</button>
     </div>
+  </div>
+
+  <!-- Logout Button (Added for completeness) -->
+  <div class="user-display-container">
+    <span id="user-display">Not logged in</span>
+    <button type="button" id="logout-button" style="display: none;">Logout</button>
   </div>
 
   <!-- Your App Script -->
