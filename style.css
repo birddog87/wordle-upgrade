@@ -64,7 +64,6 @@ h1, h2, h3 {
 
 .board-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
   grid-gap: 5px;
 }
 
@@ -398,6 +397,19 @@ tr:nth-child(even) {
 #leaderboard-modal table {
   width: 100%;
   min-width: 600px;
+}
+#leaderboard-modal .modal-content {
+  overflow-x: auto;
+}
+
+#leaderboard-modal table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+#leaderboard-modal th,
+#leaderboard-modal td {
+  word-wrap: break-word;
 }
 
 /* Achievements */

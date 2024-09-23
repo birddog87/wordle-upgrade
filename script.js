@@ -92,11 +92,6 @@ async function startGame(mode) {
   createBoard();
   createKeyboard();
 
-  // Update game board grid to match word length
-  const gameBoard = document.getElementById('game-board');
-  gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
-}
-
 // Function to get a random word
 function getRandomWord(length) {
   const filteredWords = Array.from(validWordsSet).filter(word => word.length === length);
@@ -168,11 +163,14 @@ function showNameModal() {
 function createBoard() {
   const gameBoard = document.getElementById('game-board');
   gameBoard.innerHTML = '';
-  gameBoard.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
 
   for (let i = 0; i < maxGuesses; i++) {
     const row = document.createElement('div');
     row.classList.add('board-row');
+    row.style.display = 'grid';
+    row.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
+    row.style.gridGap = '5px';
+
     for (let j = 0; j < wordLength; j++) {
       const tile = document.createElement('div');
       tile.classList.add('tile');
@@ -519,10 +517,10 @@ function viewLeaderboard() {
   const modes = ['daily', 'random', 'six-letter', 'global'];
 
   modes.forEach(mode => {
-    const leaderboardDiv = document.getElementById(`leaderboard-${mode.replace('-', '')}`);
-    leaderboardDiv.innerHTML = '<p>Loading...</p>';
-    fetchLeaderboardData(mode, leaderboardDiv);
-  });
+  const leaderboardDiv = document.getElementById(`leaderboard-${mode}`);
+  leaderboardDiv.innerHTML = '<p>Loading...</p>';
+  fetchLeaderboardData(mode, leaderboardDiv);
+});
 
   // Close event listener
   document.getElementById('leaderboard-modal-close').addEventListener('click', () => {
@@ -913,16 +911,20 @@ document.getElementById('logout-button').addEventListener('click', () => {
 // Function to update user display
 function updateUserDisplay() {
   const userDisplay = document.getElementById('user-display');
+  const loginButton = document.getElementById('login-button');
   const logoutButton = document.getElementById('logout-button');
-  
+
   if (userId) {
     userDisplay.textContent = 'Logged in as: ' + playerName;
     logoutButton.style.display = 'inline-block';
+    loginButton.style.display = 'none';
   } else {
     userDisplay.textContent = 'Not logged in';
     logoutButton.style.display = 'none';
+    loginButton.style.display = 'inline-block';
   }
 }
+
 
 // Profile Modal Trigger (Example: You can add a button to open profile)
 document.getElementById('profile-button')?.addEventListener('click', displayProfile);
@@ -955,8 +957,11 @@ startGame('daily');
 // Suggestions Button Event Listener (Already added above)
 document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
 
-// Leaderboard Modal Close Event Listener (Already added in viewLeaderboard function)
-
+document.getElementById('login-button').addEventListener('click', () => {
+  const authModal = document.getElementById('auth-modal');
+  authModal.style.display = 'block';
+  authModal.setAttribute('aria-hidden', 'false');
+});
 // Ensure that the winning modal can be closed
 document.getElementById('close-winning-modal').addEventListener('click', () => {
   const winningModal = document.getElementById('winning-modal');
