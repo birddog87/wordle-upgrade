@@ -393,7 +393,7 @@ function showWinningAnimation() {
   winningModal.setAttribute('aria-hidden', 'false');
 
   // Fetch and display the word's definition
-   fetchWordDefinition(targetWord)
+  fetchWordDefinition(targetWord)
     .then(details => {
       const definitionDiv = document.getElementById('word-definition');
       let htmlContent = `<strong>Definition:</strong><br>`;
@@ -555,33 +555,6 @@ function displayLeaderboard(data, mode) {
   leaderboardHTML += '</table>';
   return leaderboardHTML;
 }
-
-// Suggestions Feature
-function suggestNextWord() {
-  // Simple frequency-based suggestion
-  const letterFrequency = {};
-  validWordsSet.forEach(word => {
-    word.split('').forEach(letter => {
-      letterFrequency[letter] = (letterFrequency[letter] || 0) + 1;
-    });
-  });
-  // Rank words based on cumulative letter frequency
-  const suggestions = Array.from(validWordsSet).sort((a, b) => {
-    const aScore = a.split('').reduce((acc, letter) => acc + (letterFrequency[letter] || 0), 0);
-    const bScore = b.split('').reduce((acc, letter) => acc + (letterFrequency[letter] || 0), 0);
-    return bScore - aScore;
-  });
-  return suggestions.slice(0, 5); // Return top 5 suggestions
-}
-
-// Display Suggestions
-function showSuggestions() {
-  const suggestions = suggestNextWord();
-  const suggestionsDiv = document.getElementById('suggestions-list');
-  suggestionsDiv.innerHTML = `<strong>Suggestions:</strong> ${suggestions.join(', ')}`;
-}
-
-document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
 
 // Share on Twitter
 document.getElementById('share-twitter-button').addEventListener('click', () => {
@@ -784,7 +757,6 @@ function displayProfile() {
 
 // Add event listeners for tabs
 document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
-document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
 document.getElementById('feedback-button').addEventListener('click', () => {
   const feedbackModal = document.getElementById('feedback-modal');
   feedbackModal.style.display = 'block';
@@ -844,7 +816,7 @@ document.getElementById('email-signin-button').addEventListener('click', () => {
   authModalElement.setAttribute('aria-hidden', 'true');
   emailAuthModalElement.style.display = 'block';
   emailAuthModalElement.setAttribute('aria-hidden', 'false');
-});
+  });
 
 // Email Sign-In Submit
 document.getElementById('email-signin-submit-button').addEventListener('click', () => {
@@ -888,6 +860,24 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
   } else {
     alert('Please enter both email and password.');
   }
+});
+
+// Google Sign-In
+document.getElementById('google-signin-button').addEventListener('click', () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch((error) => {
+    console.error('Google Sign-In Error:', error);
+    alert('Error signing in with Google. Please try again.');
+  });
+});
+
+// Facebook Sign-In
+document.getElementById('facebook-signin-button').addEventListener('click', () => {
+  const provider = new firebase.auth.FacebookAuthProvider();
+  auth.signInWithPopup(provider).catch((error) => {
+    console.error('Facebook Sign-In Error:', error);
+    alert('Error signing in with Facebook. Please try again.');
+  });
 });
 
 // Logout functionality

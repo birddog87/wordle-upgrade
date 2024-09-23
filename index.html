@@ -20,9 +20,8 @@
   <div class="game-container">
     <h1>Wordle Upgrade</h1>
     
-    <!-- Theme Toggle and User Info -->
+    <!-- User Info -->
     <div class="settings">
-      <button id="theme-toggle" aria-label="Toggle Theme">🌙</button>
       <span id="user-display"></span>
       <button id="logout-button" style="display: none;">Logout</button>
     </div>
@@ -40,12 +39,6 @@
     <!-- Game Board and Keyboard -->
     <div id="game-board"></div>
     <div id="keyboard"></div>
-    
-    <!-- Suggestions Section -->
-    <div id="suggestions">
-      <button id="suggestions-button">Get Suggestions</button>
-      <div id="suggestions-list"></div>
-    </div>
     
     <!-- Statistics Section -->
     <div id="statistics">
@@ -89,7 +82,8 @@
       <h2 id="winning-modal-title">Congratulations!</h2>
       <canvas id="confetti-canvas"></canvas>
       <div id="word-definition"></div>
-      <button id="share-button">Share on Twitter</button>
+      <button id="share-twitter-button">Share on Twitter</button>
+      <button id="share-whatsapp-button">Share on WhatsApp</button>
       <button id="close-winning-modal">Close</button>
     </div>
   </div>
