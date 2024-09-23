@@ -393,7 +393,7 @@ function showWinningAnimation() {
   winningModal.setAttribute('aria-hidden', 'false');
 
   // Fetch and display the word's definition
-  fetchWordDefinition(targetWord)
+   fetchWordDefinition(targetWord)
     .then(details => {
       const definitionDiv = document.getElementById('word-definition');
       let htmlContent = `<strong>Definition:</strong><br>`;
@@ -556,18 +556,38 @@ function displayLeaderboard(data, mode) {
   return leaderboardHTML;
 }
 
+// Suggestions Feature
+function suggestNextWord() {
+  // Simple frequency-based suggestion
+  const letterFrequency = {};
+  validWordsSet.forEach(word => {
+    word.split('').forEach(letter => {
+      letterFrequency[letter] = (letterFrequency[letter] || 0) + 1;
+    });
+  });
+  // Rank words based on cumulative letter frequency
+  const suggestions = Array.from(validWordsSet).sort((a, b) => {
+    const aScore = a.split('').reduce((acc, letter) => acc + (letterFrequency[letter] || 0), 0);
+    const bScore = b.split('').reduce((acc, letter) => acc + (letterFrequency[letter] || 0), 0);
+    return bScore - aScore;
+  });
+  return suggestions.slice(0, 5); // Return top 5 suggestions
+}
+
+// Display Suggestions
+function showSuggestions() {
+  const suggestions = suggestNextWord();
+  const suggestionsDiv = document.getElementById('suggestions-list');
+  suggestionsDiv.innerHTML = `<strong>Suggestions:</strong> ${suggestions.join(', ')}`;
+}
+
+document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
+
 // Share on Twitter
-document.getElementById('share-twitter-button').addEventListener('click', () => {
+document.getElementById('share-button').addEventListener('click', () => {
   const shareText = `I just played Wordle Upgrade and ${guesses.length <= maxGuesses ? `solved it in ${guesses.length} attempts!` : 'failed to solve it.'} Can you beat me? #WordleUpgrade`;
   const twitterURL = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
   window.open(twitterURL, '_blank');
-});
-
-// Share on WhatsApp
-document.getElementById('share-whatsapp-button').addEventListener('click', () => {
-  const shareText = `I just played Wordle Upgrade and ${guesses.length <= maxGuesses ? `solved it in ${guesses.length} attempts!` : 'failed to solve it.'} Can you beat me? #WordleUpgrade`;
-  const whatsappURL = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-  window.open(whatsappURL, '_blank');
 });
 
 // Statistics Tracking
@@ -757,6 +777,7 @@ function displayProfile() {
 
 // Add event listeners for tabs
 document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
+document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
 document.getElementById('feedback-button').addEventListener('click', () => {
   const feedbackModal = document.getElementById('feedback-modal');
   feedbackModal.style.display = 'block';
@@ -816,7 +837,7 @@ document.getElementById('email-signin-button').addEventListener('click', () => {
   authModalElement.setAttribute('aria-hidden', 'true');
   emailAuthModalElement.style.display = 'block';
   emailAuthModalElement.setAttribute('aria-hidden', 'false');
-  });
+});
 
 // Email Sign-In Submit
 document.getElementById('email-signin-submit-button').addEventListener('click', () => {
@@ -860,24 +881,6 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
   } else {
     alert('Please enter both email and password.');
   }
-});
-
-// Google Sign-In
-document.getElementById('google-signin-button').addEventListener('click', () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch((error) => {
-    console.error('Google Sign-In Error:', error);
-    alert('Error signing in with Google. Please try again.');
-  });
-});
-
-// Facebook Sign-In
-document.getElementById('facebook-signin-button').addEventListener('click', () => {
-  const provider = new firebase.auth.FacebookAuthProvider();
-  auth.signInWithPopup(provider).catch((error) => {
-    console.error('Facebook Sign-In Error:', error);
-    alert('Error signing in with Facebook. Please try again.');
-  });
 });
 
 // Logout functionality
@@ -978,4 +981,27 @@ document.getElementById('close-winning-modal').addEventListener('click', () => {
 window.addEventListener('load', () => {
   console.log('Page loaded, initializing game');
   startGame('daily');
+});
+
+// Theme Toggle
+const themeToggleBtn = document.getElementById('theme-toggle');
+themeToggleBtn.addEventListener('click', () => {
+  document.body.classList.toggle('light-theme');
+  document.body.classList.toggle('high-contrast-theme');
+  // Save user preference in localStorage
+  const currentTheme = document.body.classList.contains('light-theme') ? 'light' :
+                       document.body.classList.contains('high-contrast-theme') ? 'high-contrast' : 'dark';
+  localStorage.setItem('theme', currentTheme);
+  console.log('Theme toggled:', currentTheme);
+});
+
+// Load saved theme on page load
+window.addEventListener('load', () => {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-theme');
+  } else if (savedTheme === 'high-contrast') {
+    document.body.classList.add('high-contrast-theme');
+  }
+  console.log('Loaded theme:', savedTheme);
 });
