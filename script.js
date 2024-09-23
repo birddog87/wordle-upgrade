@@ -1,10 +1,10 @@
 /// Initialize Firebase (Using your Firebase project's configuration)
 var firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
-  databaseURL: "YOUR_FIREBASE_DATABASE_URL",
-  projectId: "YOUR_FIREBASE_PROJECT_ID",
-  appId: "YOUR_FIREBASE_APP_ID",
+  apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs",
+  authDomain: "wordle-upgrade-c055f.firebaseapp.com",
+  databaseURL: "https://wordle-upgrade-c055f-default-rtdb.firebaseio.com",
+  projectId: "wordle-upgrade-c055f",
+  appId: "1:683362789332:web:e3aeb537a5f96773e85841",
 };
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
