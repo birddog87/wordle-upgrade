@@ -393,7 +393,7 @@ function showWinningAnimation() {
   winningModal.setAttribute('aria-hidden', 'false');
 
   // Fetch and display the word's definition
-  fetchWordDefinition(targetWord)
+   fetchWordDefinition(targetWord)
     .then(details => {
       const definitionDiv = document.getElementById('word-definition');
       let htmlContent = `<strong>Definition:</strong><br>`;
@@ -490,27 +490,31 @@ async function fetchWordDefinition(word) {
 
 // View leaderboard data
 function viewLeaderboard() {
-  const today = new Date().toLocaleDateString();
-
-  // Array of modes to fetch
-  const modes = ['daily', 'random', 'six-letter', 'global'];
-
-  let leaderboardHTML = '';
-
-  modes.forEach(mode => {
-    leaderboardHTML += `<h3>${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode</h3>`;
-    leaderboardHTML += `<div id="leaderboard-${mode}"></div>`;
-  });
-
   const leaderboardContent = document.getElementById('leaderboard-content');
   if (leaderboardContent) {
-    leaderboardContent.innerHTML = leaderboardHTML;
+    leaderboardContent.innerHTML = '<h3>Loading leaderboard...</h3>';
 
-    modes.forEach(mode => {
-      database.ref(`leaderboard/${mode}/${today}`).once('value', (snapshot) => {
-        displayLeaderboard(snapshot.val(), `leaderboard-${mode}`);
-      });
+    const modes = ['daily', 'random', 'six-letter'];
+    let leaderboardHTML = '';
+
+    const promises = modes.map(mode => {
+      return database.ref(`leaderboard/${mode}`).once('value');
     });
+
+    Promise.all(promises)
+      .then(snapshots => {
+        snapshots.forEach((snapshot, index) => {
+          const mode = modes[index];
+          leaderboardHTML += `<h3>${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode</h3>`;
+          leaderboardHTML += displayLeaderboard(snapshot.val(), mode);
+        });
+
+        leaderboardContent.innerHTML = leaderboardHTML;
+      })
+      .catch(error => {
+        console.error('Error fetching leaderboard data:', error);
+        leaderboardContent.innerHTML = '<h3>Error loading leaderboard. Please try again later.</h3>';
+      });
 
     const leaderboardModal = document.getElementById('leaderboard-modal');
     leaderboardModal.style.display = 'block';
@@ -520,32 +524,36 @@ function viewLeaderboard() {
   }
 }
 
-function displayLeaderboard(data, elementId) {
-  const leaderboardElement = document.getElementById(elementId);
-  if (!leaderboardElement) {
-    console.error(`Element with id ${elementId} not found`);
-    return;
-  }
-  leaderboardElement.innerHTML = '';
-
+function displayLeaderboard(data, mode) {
   if (!data) {
-    leaderboardElement.innerHTML = `<p>No leaderboard data available for today.</p>`;
-    return;
+    return `<p>No leaderboard data available for ${mode} mode.</p>`;
   }
 
-  const leaderboard = Object.values(data).sort((a, b) => a.timeTaken - b.timeTaken);
-  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Time (s)</th><th>Attempts</th><th>Result</th></tr>';
-  leaderboard.forEach((entry, index) => {
+  const allEntries = [];
+  Object.values(data).forEach(dateEntries => {
+    Object.values(dateEntries).forEach(entry => {
+      allEntries.push(entry);
+    });
+  });
+
+  allEntries.sort((a, b) => {
+    if (a.won !== b.won) return b.won - a.won; // Sort by wins first
+    if (a.attempts !== b.attempts) return a.attempts - b.attempts; // Then by attempts
+    return a.timeTaken - b.timeTaken; // Finally by time taken
+  });
+
+  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Result</th><th>Attempts</th><th>Time (s)</th></tr>';
+  allEntries.slice(0, 10).forEach((entry, index) => {
     leaderboardHTML += `<tr>
       <td>${index + 1}</td>
       <td>${entry.player}</td>
-      <td>${entry.timeTaken}</td>
-      <td>${entry.attempts}</td>
       <td>${entry.won ? 'Won' : 'Lost'}</td>
+      <td>${entry.attempts}</td>
+      <td>${entry.timeTaken}</td>
     </tr>`;
   });
   leaderboardHTML += '</table>';
-  leaderboardElement.innerHTML = leaderboardHTML;
+  return leaderboardHTML;
 }
 
 // Suggestions Feature
@@ -576,10 +584,17 @@ function showSuggestions() {
 document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
 
 // Share on Twitter
-document.getElementById('share-button').addEventListener('click', () => {
+document.getElementById('share-twitter-button').addEventListener('click', () => {
   const shareText = `I just played Wordle Upgrade and ${guesses.length <= maxGuesses ? `solved it in ${guesses.length} attempts!` : 'failed to solve it.'} Can you beat me? #WordleUpgrade`;
   const twitterURL = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
   window.open(twitterURL, '_blank');
+});
+
+// Share on WhatsApp
+document.getElementById('share-whatsapp-button').addEventListener('click', () => {
+  const shareText = `I just played Wordle Upgrade and ${guesses.length <= maxGuesses ? `solved it in ${guesses.length} attempts!` : 'failed to solve it.'} Can you beat me? #WordleUpgrade`;
+  const whatsappURL = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+  window.open(whatsappURL, '_blank');
 });
 
 // Statistics Tracking
@@ -875,24 +890,6 @@ document.getElementById('email-signup-button').addEventListener('click', () => {
   }
 });
 
-// Google Sign-In
-document.getElementById('google-signin-button').addEventListener('click', () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch((error) => {
-    console.error('Google Sign-In Error:', error);
-    alert('Error signing in with Google. Please try again.');
-  });
-});
-
-// Facebook Sign-In
-document.getElementById('facebook-signin-button').addEventListener('click', () => {
-  const provider = new firebase.auth.FacebookAuthProvider();
-  auth.signInWithPopup(provider).catch((error) => {
-    console.error('Facebook Sign-In Error:', error);
-    alert('Error signing in with Facebook. Please try again.');
-  });
-});
-
 // Logout functionality
 document.getElementById('logout-button').addEventListener('click', () => {
   auth.signOut().then(() => {
@@ -991,27 +988,4 @@ document.getElementById('close-winning-modal').addEventListener('click', () => {
 window.addEventListener('load', () => {
   console.log('Page loaded, initializing game');
   startGame('daily');
-});
-
-// Theme Toggle
-const themeToggleBtn = document.getElementById('theme-toggle');
-themeToggleBtn.addEventListener('click', () => {
-  document.body.classList.toggle('light-theme');
-  document.body.classList.toggle('high-contrast-theme');
-  // Save user preference in localStorage
-  const currentTheme = document.body.classList.contains('light-theme') ? 'light' :
-                       document.body.classList.contains('high-contrast-theme') ? 'high-contrast' : 'dark';
-  localStorage.setItem('theme', currentTheme);
-  console.log('Theme toggled:', currentTheme);
-});
-
-// Load saved theme on page load
-window.addEventListener('load', () => {
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme === 'light') {
-    document.body.classList.add('light-theme');
-  } else if (savedTheme === 'high-contrast') {
-    document.body.classList.add('high-contrast-theme');
-  }
-  console.log('Loaded theme:', savedTheme);
 });
