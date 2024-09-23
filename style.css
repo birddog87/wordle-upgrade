@@ -1,7 +1,7 @@
 /* Basic Styling */
 body {
-  background-color: var(--background-color, #121213);
-  color: var(--text-color, #FFFFFF);
+  background-color: #121213;
+  color: #FFFFFF;
   font-family: Arial, sans-serif;
   margin: 0;
   text-align: center;
@@ -12,35 +12,20 @@ body {
   padding: 20px;
 }
 
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 h1, h2, h3 {
   margin-bottom: 20px;
 }
+
 #mode-indicator {
   margin-top: 10px;
   font-weight: bold;
-  color: var(--text-color, #FFFFFF);
-}
-
-/* Settings (Theme and Language) */
-.settings {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-#theme-toggle {
-  background: none;
-  border: none;
-  color: var(--text-color, #FFFFFF);
-  font-size: 1.5rem;
-  cursor: pointer;
-  margin-right: 10px;
-}
-
-#language-select {
-  padding: 5px;
-  font-size: 1rem;
+  color: #FFFFFF;
 }
 
 /* Mode Selection Buttons */
@@ -52,8 +37,8 @@ h1, h2, h3 {
 }
 
 .mode-selection button {
-  background-color: var(--button-bg, #3A3A3C);
-  color: var(--button-text, #FFFFFF);
+  background-color: #3A3A3C;
+  color: #FFFFFF;
   border: none;
   padding: 12px 24px;
   margin: 5px;
@@ -64,7 +49,7 @@ h1, h2, h3 {
 }
 
 .mode-selection button:hover {
-  background-color: var(--button-hover-bg, #5A5A5C);
+  background-color: #5A5A5C;
 }
 
 /* Game Board */
@@ -81,9 +66,9 @@ h1, h2, h3 {
   position: relative;
   width: 100%;
   padding-bottom: 100%; /* Makes the tile square */
-  border: 2px solid var(--tile-border, #3A3A3C);
-  background-color: var(--tile-bg, #121213);
-  color: var(--tile-text, #FFFFFF);
+  border: 2px solid #3A3A3C;
+  background-color: #121213;
+  color: #FFFFFF;
   transition: background-color 0.3s, border-color 0.3s;
 }
 
@@ -155,7 +140,7 @@ h1, h2, h3 {
 }
 
 #keyboard button {
-  background-color: var(--keyboard-bg, #818384);
+  background-color: #818384;
   color: #FFFFFF;
   border: none;
   padding: 15px;
@@ -168,7 +153,7 @@ h1, h2, h3 {
 }
 
 #keyboard button:hover {
-  background-color: var(--keyboard-hover-bg, #5A5A5C);
+  background-color: #5A5A5C;
 }
 
 #keyboard button.wide-button {
@@ -185,33 +170,6 @@ h1, h2, h3 {
 
 .key-absent {
   background-color: #3A3A3C !important; /* Grey */
-}
-
-/* Suggestions */
-#suggestions {
-  margin: 20px auto;
-  max-width: 600px;
-}
-
-#suggestions-button {
-  background-color: var(--button-bg, #3A3A3C);
-  color: var(--button-text, #FFFFFF);
-  border: none;
-  padding: 10px 20px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  font-size: 1rem;
-  border-radius: 5px;
-  transition: background-color 0.3s;
-}
-
-#suggestions-button:hover {
-  background-color: var(--button-hover-bg, #5A5A5C);
-}
-
-#suggestions-list {
-  color: var(--text-color, #FFFFFF);
-  font-size: 1.1rem;
 }
 
 /* Statistics */
@@ -238,7 +196,7 @@ h1, h2, h3 {
 }
 
 .modal-content {
-  background-color: var(--modal-bg, #1A1A1B);
+  background-color: #1A1A1B;
   margin: 5% auto;
   padding: 20px;
   border: 1px solid #888;
@@ -267,6 +225,12 @@ h1, h2, h3 {
   color: #AAAAAA;
 }
 
+.modal-content label {
+  display: block;
+  margin-top: 10px;
+  text-align: left;
+}
+
 .modal-content input[type="text"],
 .modal-content input[type="email"],
 .modal-content input[type="password"],
@@ -280,8 +244,8 @@ h1, h2, h3 {
 }
 
 .modal-content button {
-  background-color: var(--button-bg, #3A3A3C);
-  color: var(--button-text, #FFFFFF);
+  background-color: #3A3A3C;
+  color: #FFFFFF;
   border: none;
   padding: 10px 20px;
   margin-top: 10px;
@@ -292,7 +256,7 @@ h1, h2, h3 {
 }
 
 .modal-content button:hover {
-  background-color: var(--button-hover-bg, #5A5A5C);
+  background-color: #5A5A5C;
 }
 
 textarea {
@@ -302,7 +266,7 @@ textarea {
 
 /* Winning Modal */
 #winning-modal .modal-content {
-  background-color: var(--modal-bg, #1A1A1B);
+  background-color: #1A1A1B;
   border: 1px solid #888;
   padding: 20px;
   border-radius: 10px;
@@ -317,13 +281,13 @@ textarea {
 #word-definition {
   margin-top: 20px;
   font-size: 1.1rem;
-  color: var(--text-color, #FFFFFF);
+  color: #FFFFFF;
 }
 
 #share-button,
 #close-winning-modal {
-  background-color: var(--button-bg, #3A3A3C);
-  color: var(--button-text, #FFFFFF);
+  background-color: #3A3A3C;
+  color: #FFFFFF;
   border: none;
   padding: 12px 24px;
   margin: 10px 5px 0 5px;
@@ -335,12 +299,12 @@ textarea {
 
 #share-button:hover,
 #close-winning-modal:hover {
-  background-color: var(--button-hover-bg, #5A5A5C);
+  background-color: #5A5A5C;
 }
 
 /* Feedback Modal */
 #feedback-modal .modal-content {
-  background-color: var(--modal-bg, #1A1A1B);
+  background-color: #1A1A1B;
   border: 1px solid #888;
   padding: 20px;
   border-radius: 10px;
@@ -349,7 +313,7 @@ textarea {
 /* Authentication Modals */
 #auth-modal .modal-content,
 #email-auth-modal .modal-content {
-  background-color: var(--modal-bg, #1A1A1B);
+  background-color: #1A1A1B;
   border: 1px solid #888;
   padding: 20px;
   border-radius: 10px;
@@ -362,7 +326,7 @@ textarea {
 }
 
 #achievements-modal .modal-content {
-  background-color: var(--modal-bg, #1A1A1B);
+  background-color: #1A1A1B;
   border: 1px solid #888;
   padding: 20px;
   border-radius: 10px;
@@ -373,7 +337,7 @@ textarea {
 }
 
 #profile-modal .modal-content {
-  background-color: var(--modal-bg, #1A1A1B);
+  background-color: #1A1A1B;
   border: 1px solid #888;
   padding: 20px;
   border-radius: 10px;
@@ -392,55 +356,44 @@ table {
 }
 
 th, td {
-  border: 1px solid var(--table-border, #555);
+  border: 1px solid #555;
   padding: 8px;
   text-align: center;
 }
 
 th {
-  background-color: var(--table-header-bg, #333);
-  color: var(--table-header-text, #FFFFFF);
+  background-color: #333;
+  color: #FFFFFF;
 }
 
 tr:nth-child(even) {
-  background-color: var(--table-row-bg, #2A2A2A);
+  background-color: #2A2A2A;
 }
 
-/* Themes */
-.light-theme {
-  --background-color: #FFFFFF;
-  --text-color: #000000;
-  --button-bg: #E0E0E0;
-  --button-text: #000000;
-  --button-hover-bg: #BDBDBD;
-  --keyboard-bg: #D3D6DA;
-  --keyboard-hover-bg: #A8A8A8;
-  --tile-border: #D3D6DA;
-  --tile-bg: #D3D6DA;
-  --tile-text: #000000;
-  --modal-bg: #F0F0F0;
-  --table-border: #CCCCCC;
-  --table-header-bg: #BDBDBD;
-  --table-header-text: #000000;
-  --table-row-bg: #E8E8E8;
+/* Achievements */
+.achievement {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
-.high-contrast-theme {
-  --background-color: #000000;
-  --text-color: #FFFFFF;
-  --button-bg: #000000;
-  --button-text: #FFFFFF;
-  --button-hover-bg: #444444;
-  --keyboard-bg: #000000;
-  --keyboard-hover-bg: #444444;
-  --tile-border: #FFFFFF;
-  --tile-bg: #000000;
-  --tile-text: #FFFFFF;
-  --modal-bg: #000000;
-  --table-border: #FFFFFF;
-  --table-header-bg: #333333;
-  --table-header-text: #FFFFFF;
-  --table-row-bg: #111111;
+.achievement img {
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+}
+
+/* User Display */
+.user-display-container {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+}
+
+#user-display {
+  margin-right: 10px;
 }
 
 /* Responsive Design */

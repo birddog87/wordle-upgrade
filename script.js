@@ -494,7 +494,7 @@ function viewLeaderboard() {
   if (leaderboardContent) {
     leaderboardContent.innerHTML = '<h3>Loading leaderboard...</h3>';
 
-    const modes = ['daily', 'random', 'six-letter'];
+    const modes = ['daily', 'random', 'six-letter', 'global'];
     let leaderboardHTML = '';
 
     const promises = modes.map(mode => {
@@ -509,16 +509,42 @@ function viewLeaderboard() {
           leaderboardHTML += displayLeaderboard(snapshot.val(), mode);
         });
 
-        leaderboardContent.innerHTML = leaderboardHTML;
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        leaderboardModal.style.display = 'block';
+        leaderboardModal.setAttribute('aria-hidden', 'false');
+        leaderboardModal.querySelector('.modal-content').innerHTML = `
+          <span class="close" id="leaderboard-modal-close" aria-label="Close">&times;</span>
+          <h2 id="leaderboard-modal-title" data-i18n="leaderboard">Leaderboard</h2>
+          <div class="tabs">
+            <button class="tablink" id="daily-tab" onclick="openLeaderboardTab('daily')" data-i18n="daily_word">Daily Word</button>
+            <button class="tablink" id="random-tab" onclick="openLeaderboardTab('random')" data-i18n="random_word">Random Word</button>
+            <button class="tablink" id="sixLetter-tab" onclick="openLeaderboardTab('sixLetter')" data-i18n="six_letter_word">6-Letter Word</button>
+            <button class="tablink" id="global-tab" onclick="openLeaderboardTab('global')" data-i18n="global">Global</button>
+          </div>
+          <div id="daily" class="tabcontent">${displayLeaderboard(snapshots[0].val(), 'daily')}</div>
+          <div id="random" class="tabcontent">${displayLeaderboard(snapshots[1].val(), 'random')}</div>
+          <div id="sixLetter" class="tabcontent">${displayLeaderboard(snapshots[2].val(), 'six-letter')}</div>
+          <div id="global" class="tabcontent">${displayLeaderboard(snapshots[3].val(), 'global')}</div>
+        `;
       })
       .catch(error => {
         console.error('Error fetching leaderboard data:', error);
-        leaderboardContent.innerHTML = '<h3>Error loading leaderboard. Please try again later.</h3>';
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        leaderboardModal.style.display = 'block';
+        leaderboardModal.setAttribute('aria-hidden', 'false');
+        leaderboardModal.querySelector('.modal-content').innerHTML = `
+          <span class="close" id="leaderboard-modal-close" aria-label="Close">&times;</span>
+          <h2 id="leaderboard-modal-title" data-i18n="leaderboard">Leaderboard</h2>
+          <p>Error loading leaderboard. Please try again later.</p>
+        `;
       });
 
-    const leaderboardModal = document.getElementById('leaderboard-modal');
-    leaderboardModal.style.display = 'block';
-    leaderboardModal.setAttribute('aria-hidden', 'false');
+    // Reattach close event listener
+    document.getElementById('leaderboard-modal-close').addEventListener('click', () => {
+      const leaderboardModal = document.getElementById('leaderboard-modal');
+      leaderboardModal.style.display = 'none';
+      leaderboardModal.setAttribute('aria-hidden', 'true');
+    });
   } else {
     console.error('Leaderboard content element not found');
   }
@@ -546,7 +572,7 @@ function displayLeaderboard(data, mode) {
   allEntries.slice(0, 10).forEach((entry, index) => {
     leaderboardHTML += `<tr>
       <td>${index + 1}</td>
-      <td>${entry.player}</td>
+      <td>${sanitizeHTML(entry.player)}</td>
       <td>${entry.won ? 'Won' : 'Lost'}</td>
       <td>${entry.attempts}</td>
       <td>${entry.timeTaken}</td>
@@ -940,6 +966,67 @@ document.addEventListener('keydown', (event) => {
 // Start the game with default mode
 startGame('daily');
 
+// Suggestions Button Event Listener (Already added above)
+document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
+
+// Leaderboard Modal Close Event Listener (Already added in viewLeaderboard function)
+
+// Ensure that the winning modal can be closed
+document.getElementById('close-winning-modal').addEventListener('click', () => {
+  const winningModal = document.getElementById('winning-modal');
+  winningModal.style.display = 'none';
+  winningModal.setAttribute('aria-hidden', 'true');
+});
+
+// Name Modal Close Event Listener
+document.getElementById('name-modal-close').addEventListener('click', () => {
+  const nameModal = document.getElementById('name-modal');
+  nameModal.style.display = 'none';
+  nameModal.setAttribute('aria-hidden', 'true');
+});
+
+// Feedback Modal Close Event Listener
+document.getElementById('feedback-modal-close').addEventListener('click', () => {
+  const feedbackModal = document.getElementById('feedback-modal');
+  feedbackModal.style.display = 'none';
+  feedbackModal.setAttribute('aria-hidden', 'true');
+});
+
+// Authentication Modal Close Event Listener
+document.getElementById('auth-modal-close').addEventListener('click', () => {
+  const authModal = document.getElementById('auth-modal');
+  authModal.style.display = 'none';
+  authModal.setAttribute('aria-hidden', 'true');
+});
+
+// Email Auth Modal Close Event Listener
+document.getElementById('email-auth-modal-close').addEventListener('click', () => {
+  const emailAuthModal = document.getElementById('email-auth-modal');
+  emailAuthModal.style.display = 'none';
+  emailAuthModal.setAttribute('aria-hidden', 'true');
+});
+
+// Achievements Modal Close Event Listener
+document.getElementById('achievements-modal-close').addEventListener('click', () => {
+  const achievementsModal = document.getElementById('achievements-modal');
+  achievementsModal.style.display = 'none';
+  achievementsModal.setAttribute('aria-hidden', 'true');
+});
+
+// Profile Modal Close Event Listener
+document.getElementById('profile-close-button').addEventListener('click', () => {
+  const profileModal = document.getElementById('profile-modal');
+  profileModal.style.display = 'none';
+  profileModal.setAttribute('aria-hidden', 'true');
+});
+
+// Function to sanitize HTML to prevent XSS
+function sanitizeHTML(str) {
+  const temp = document.createElement('div');
+  temp.textContent = str;
+  return temp.innerHTML;
+}
+
 // Optional: Automatically focus input fields when certain modals are opened, like the name modal or login modal
 document.getElementById('save-name-button').addEventListener('click', () => {
   const nameModal = document.getElementById('name-modal');
@@ -957,18 +1044,21 @@ document.getElementById('save-name-button').addEventListener('click', () => {
   }
 });
 
-// Ensure modals like feedback, profile, and leaderboard can be opened and closed
-document.getElementById('feedback-button').addEventListener('click', () => {
-  const feedbackModal = document.getElementById('feedback-modal');
-  feedbackModal.style.display = 'block';
-  feedbackModal.setAttribute('aria-hidden', 'false');
-});
+// Function to open specific leaderboard tab
+function openLeaderboardTab(tabName) {
+  const tabcontents = document.getElementsByClassName('tabcontent');
+  for (let i = 0; i < tabcontents.length; i++) {
+    tabcontents[i].style.display = 'none';
+  }
 
-document.getElementById('leaderboard-modal-close').addEventListener('click', () => {
-  const leaderboardModal = document.getElementById('leaderboard-modal');
-  leaderboardModal.style.display = 'none';
-  leaderboardModal.setAttribute('aria-hidden', 'true');
-});
+  const tablinks = document.getElementsByClassName('tablink');
+  for (let i = 0; i < tablinks.length; i++) {
+    tablinks[i].classList.remove('active');
+  }
+
+  document.getElementById(tabName).style.display = 'block';
+  event.currentTarget.classList.add('active');
+}
 
 // Ensure that the winning modal can be closed
 document.getElementById('close-winning-modal').addEventListener('click', () => {
@@ -977,31 +1067,15 @@ document.getElementById('close-winning-modal').addEventListener('click', () => {
   winningModal.setAttribute('aria-hidden', 'true');
 });
 
+// Ensure modals like feedback, profile, and leaderboard can be opened and closed
+document.getElementById('feedback-button').addEventListener('click', () => {
+  const feedbackModal = document.getElementById('feedback-modal');
+  feedbackModal.style.display = 'block';
+  feedbackModal.setAttribute('aria-hidden', 'false');
+});
+
 // Initialize the game
 window.addEventListener('load', () => {
   console.log('Page loaded, initializing game');
   startGame('daily');
-});
-
-// Theme Toggle
-const themeToggleBtn = document.getElementById('theme-toggle');
-themeToggleBtn.addEventListener('click', () => {
-  document.body.classList.toggle('light-theme');
-  document.body.classList.toggle('high-contrast-theme');
-  // Save user preference in localStorage
-  const currentTheme = document.body.classList.contains('light-theme') ? 'light' :
-                       document.body.classList.contains('high-contrast-theme') ? 'high-contrast' : 'dark';
-  localStorage.setItem('theme', currentTheme);
-  console.log('Theme toggled:', currentTheme);
-});
-
-// Load saved theme on page load
-window.addEventListener('load', () => {
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme === 'light') {
-    document.body.classList.add('light-theme');
-  } else if (savedTheme === 'high-contrast') {
-    document.body.classList.add('high-contrast-theme');
-  }
-  console.log('Loaded theme:', savedTheme);
 });

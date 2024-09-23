@@ -6,7 +6,7 @@ const urlsToCache = [
   '/script.js',
   '/words_en.txt',
   '/words_es.txt',
-  // Add other assets like images, fonts, etc.
+  // Add other assets like images, icons, etc.
 ];
 
 // Install the service worker and cache assets
