@@ -92,39 +92,39 @@ async function startGame(mode) {
   createBoard();
   createKeyboard();
 
-// Function to get a random word
-function getRandomWord(length) {
-  const filteredWords = Array.from(validWordsSet).filter(word => word.length === length);
-  return filteredWords[Math.floor(Math.random() * filteredWords.length)];
-}
+  // Function to get a random word
+  function getRandomWord(length) {
+    const filteredWords = Array.from(validWordsSet).filter(word => word.length === length);
+    return filteredWords[Math.floor(Math.random() * filteredWords.length)];
+  }
 
-// Function to get the daily word
-function getDailyWord() {
-  const today = new Date();
-  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-  const filteredWords = Array.from(validWordsSet).filter(word => word.length === 5);
-  return filteredWords[seed % filteredWords.length];
-}
+  // Function to get the daily word
+  function getDailyWord() {
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const filteredWords = Array.from(validWordsSet).filter(word => word.length === 5);
+    return filteredWords[seed % filteredWords.length];
+  }
 
-// Get player's name from Firebase or prompt for it
-function getPlayerName() {
-  if (userId) {
-    database.ref(`users/${userId}/profile/name`).once('value').then(snapshot => {
-      playerName = snapshot.val() || '';
+  // Get player's name from Firebase or prompt for it
+  function getPlayerName() {
+    if (userId) {
+      database.ref(`users/${userId}/profile/name`).once('value').then(snapshot => {
+        playerName = snapshot.val() || '';
+        if (!playerName) {
+          showNameModal();
+        }
+        updateUserDisplay();
+      });
+    } else {
+      // If not authenticated, use localStorage
+      playerName = localStorage.getItem('playerName') || '';
       if (!playerName) {
         showNameModal();
       }
       updateUserDisplay();
-    });
-  } else {
-    // If not authenticated, use localStorage
-    playerName = localStorage.getItem('playerName') || '';
-    if (!playerName) {
-      showNameModal();
     }
-    updateUserDisplay();
   }
-}
 
 // Show name entry modal
 function showNameModal() {
