@@ -94,73 +94,73 @@ async function startGame(mode) {
   // Reset the game board and keyboard
   createBoard();
   createKeyboard();
+  updateBoard();
+}
 
   // Function to get a random word
-  function getRandomWord(length) {
-    const filteredWords = Array.from(validWordsSet).filter(word => word.length === length);
-    return filteredWords[Math.floor(Math.random() * filteredWords.length)];
-  }
+function getRandomWord(length) {
+  const filteredWords = Array.from(validWordsSet).filter(word => word.length === length);
+  return filteredWords[Math.floor(Math.random() * filteredWords.length)];
+}
 
-  // Function to get the daily word
-  function getDailyWord() {
-    const today = new Date();
-    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-    const filteredWords = Array.from(validWordsSet).filter(word => word.length === 5);
-    return filteredWords[seed % filteredWords.length];
-  }
+// Function to get the daily word
+function getDailyWord() {
+  const today = new Date();
+  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+  const filteredWords = Array.from(validWordsSet).filter(word => word.length === 5);
+  return filteredWords[seed % filteredWords.length];
+}
 
   // Get player's name from Firebase or prompt for it
-  function getPlayerName() {
-    if (userId) {
-      database.ref(`users/${userId}/profile/name`).once('value').then(snapshot => {
-        playerName = snapshot.val() || '';
-        if (!playerName) {
-          showNameModal();
-        }
-        updateUserDisplay();
-      });
-    } else {
-      // If not authenticated, use localStorage
-      playerName = localStorage.getItem('playerName') || '';
+function getPlayerName() {
+  if (userId) {
+    database.ref(`users/${userId}/profile/name`).once('value').then(snapshot => {
+      playerName = snapshot.val() || '';
       if (!playerName) {
         showNameModal();
       }
       updateUserDisplay();
+    });
+  } else {
+    // If not authenticated, use localStorage
+    playerName = localStorage.getItem('playerName') || '';
+    if (!playerName) {
+      showNameModal();
     }
+    updateUserDisplay();
   }
+}
 
   // Show name entry modal
-  function showNameModal() {
-    const nameModal = document.getElementById('name-modal');
-    nameModal.style.display = 'block';
-    nameModal.setAttribute('aria-hidden', 'false');
+function showNameModal() {
+  const nameModal = document.getElementById('name-modal');
+  nameModal.style.display = 'block';
+  nameModal.setAttribute('aria-hidden', 'false');
 
-    // Automatically focus the input field when the modal opens
-    const playerNameInput = document.getElementById('player-name-input');
-    playerNameInput.focus();
+  // Automatically focus the input field when the modal opens
+  const playerNameInput = document.getElementById('player-name-input');
+  playerNameInput.focus();
 
-    document.getElementById('save-name-button').onclick = function () {
-      const nameInput = playerNameInput;
-      if (nameInput.value.trim()) {
-        playerName = sanitizeHTML(nameInput.value.trim());
-        if (userId) {
-          // Save to Firebase
-          database.ref(`users/${userId}/profile`).update({
-            name: playerName
-          });
-        } else {
-          // Save to localStorage
-          localStorage.setItem('playerName', playerName);
-        }
-        nameModal.style.display = 'none';
-        nameModal.setAttribute('aria-hidden', 'true');
-        updateUserDisplay();
-        startGame(currentMode); // Restart the game after saving the name
+  document.getElementById('save-name-button').onclick = function () {
+    const nameInput = playerNameInput;
+    if (nameInput.value.trim()) {
+      playerName = sanitizeHTML(nameInput.value.trim());
+      if (userId) {
+        // Save to Firebase
+        database.ref(`users/${userId}/profile`).update({
+          name: playerName
+        });
       } else {
-        alert('Please enter your name.');
+        // Save to localStorage
+        localStorage.setItem('playerName', playerName);
       }
-    };
-  }
+      nameModal.style.display = 'none';
+      nameModal.setAttribute('aria-hidden', 'true');
+      updateUserDisplay();
+    } else {
+      alert('Please enter your name.');
+    }
+  };
 }
 
 // Create game board
@@ -171,9 +171,6 @@ function createBoard() {
   for (let i = 0; i < maxGuesses; i++) {
     const row = document.createElement('div');
     row.classList.add('board-row');
-    row.style.display = 'grid';
-    row.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
-    row.style.gridGap = '5px';
 
     for (let j = 0; j < wordLength; j++) {
       const tile = document.createElement('div');

@@ -5,7 +5,6 @@ body {
   font-family: Arial, sans-serif;
   margin: 0;
   text-align: center;
-  transition: background-color 0.3s, color 0.3s;
 }
 
 .game-container {
@@ -55,7 +54,7 @@ h1, h2, h3 {
 /* Game Board */
 #game-board {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(6, 1fr);
   grid-gap: 5px;
   justify-content: center;
   margin: 0 auto 20px auto;
@@ -64,34 +63,23 @@ h1, h2, h3 {
 
 .board-row {
   display: grid;
+  grid-template-columns: repeat(5, 1fr);
   grid-gap: 5px;
 }
 
 .tile {
-  position: relative;
-  width: 100%;
-  padding-bottom: 100%; /* Makes the tile square */
+  width: 60px;
+  height: 60px;
   border: 2px solid #3A3A3C;
   background-color: #121213;
   color: #FFFFFF;
-  transition: background-color 0.3s, border-color 0.3s, transform 0.3s;
-}
-
-.tile.flip {
-  animation: flip 0.5s forwards;
-}
-
-.tile.invalid {
-  animation: shake 0.5s;
-}
-
-.tile span {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   font-size: 2rem;
+  font-weight: bold;
   text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s, border-color 0.3s, transform 0.3s;
 }
 
 /* Tile Colors */
@@ -126,6 +114,14 @@ h1, h2, h3 {
   100% {
     transform: rotateX(0deg);
   }
+}
+
+.tile.flip {
+  animation: flip 0.5s forwards;
+}
+
+.tile.invalid {
+  animation: shake 0.5s;
 }
 
 @keyframes shake {
@@ -379,6 +375,7 @@ th, td {
   border: 1px solid #555;
   padding: 8px;
   text-align: center;
+  font-size: 0.9rem;
 }
 
 th {
@@ -390,14 +387,6 @@ tr:nth-child(even) {
   background-color: #2A2A2A;
 }
 
-#leaderboard-modal .modal-content {
-  overflow-x: auto;
-}
-
-#leaderboard-modal table {
-  width: 100%;
-  min-width: 600px;
-}
 #leaderboard-modal .modal-content {
   overflow-x: auto;
 }
@@ -435,7 +424,8 @@ tr:nth-child(even) {
   margin-right: 10px;
 }
 
-.user-display-container button#logout-button {
+.user-display-container button#logout-button,
+.user-display-container button#login-button {
   background-color: #3A3A3C;
   color: #FFFFFF;
   border: none;
@@ -444,56 +434,25 @@ tr:nth-child(even) {
   font-size: 0.9rem;
   border-radius: 5px;
   transition: background-color 0.3s;
+  margin-left: 10px;
 }
 
-.user-display-container button#logout-button:hover {
+.user-display-container button#logout-button:hover,
+.user-display-container button#login-button:hover {
   background-color: #5A5A5C;
 }
 
 /* Responsive Design */
-@media (min-width: 768px) {
-  #game-board {
-    max-width: 500px;
-    grid-gap: 10px;
-  }
-
-  .tile span {
-    font-size: 2.5rem;
-  }
-
-  #keyboard button {
-    padding: 20px;
-    font-size: 1.2rem;
-    flex: 0 1 50px;
-  }
-
-  #keyboard button.wide-button {
-    flex: 0 1 80px;
-  }
-
-  .mode-selection button {
-    font-size: 1.2rem;
-    padding: 15px 30px;
-  }
-
-  .settings {
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 480px) {
-  .mode-selection button {
-    font-size: 0.9rem;
-    padding: 10px 15px;
-  }
-
-  .tile span {
+@media (max-width: 600px) {
+  .tile {
+    width: 40px;
+    height: 40px;
     font-size: 1.5rem;
   }
 
   #keyboard button {
     padding: 10px;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     flex: 0 1 30px;
   }
 
@@ -501,7 +460,65 @@ tr:nth-child(even) {
     flex: 0 1 50px;
   }
 
-  #statistics {
-    max-width: 100%;
+  th, td {
+    padding: 4px;
+    font-size: 0.8rem;
   }
+
+  .mode-selection button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+.settings {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.settings button {
+  background-color: #3A3A3C;
+  color: #FFFFFF;
+  border: none;
+  padding: 10px 15px;
+  margin: 0 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.settings button:hover {
+  background-color: #5A5A5C;
+}
+
+/* Tabs in Leaderboard Modal */
+.tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.tablink {
+  background-color: #3A3A3C;
+  color: #FFFFFF;
+  padding: 10px 15px;
+  cursor: pointer;
+  border: none;
+  margin: 0 5px;
+  font-size: 1rem;
+  border-radius: 5px 5px 0 0;
+}
+
+.tablink.active {
+  background-color: #5A5A5C;
+}
+
+.tabcontent {
+  display: none;
+}
+
+.tabcontent.active {
+  display: block;
 }
