@@ -38,7 +38,10 @@ async function loadWordList() {
       throw new Error('Failed to load word list');
     }
     const text = await response.text();
-    const wordsArray = text.split('\n').map(word => word.trim().toLowerCase()).filter(word => word.length > 0);
+    const wordsArray = text
+      .split('\n')
+      .map(word => word.trim().toLowerCase())
+      .filter(word => word.length > 0);
     validWordsSet = new Set(wordsArray);
     console.log('Word list loaded');
   } catch (error) {
@@ -126,37 +129,38 @@ async function startGame(mode) {
     }
   }
 
-// Show name entry modal
-function showNameModal() {
-  const nameModal = document.getElementById('name-modal');
-  nameModal.style.display = 'block';
-  nameModal.setAttribute('aria-hidden', 'false');
+  // Show name entry modal
+  function showNameModal() {
+    const nameModal = document.getElementById('name-modal');
+    nameModal.style.display = 'block';
+    nameModal.setAttribute('aria-hidden', 'false');
 
-  // Automatically focus the input field when the modal opens
-  const playerNameInput = document.getElementById('player-name-input');
-  playerNameInput.focus();
+    // Automatically focus the input field when the modal opens
+    const playerNameInput = document.getElementById('player-name-input');
+    playerNameInput.focus();
 
-  document.getElementById('save-name-button').onclick = function () {
-    const nameInput = playerNameInput;
-    if (nameInput.value.trim()) {
-      playerName = sanitizeHTML(nameInput.value.trim());
-      if (userId) {
-        // Save to Firebase
-        database.ref(`users/${userId}/profile`).update({
-          name: playerName
-        });
+    document.getElementById('save-name-button').onclick = function () {
+      const nameInput = playerNameInput;
+      if (nameInput.value.trim()) {
+        playerName = sanitizeHTML(nameInput.value.trim());
+        if (userId) {
+          // Save to Firebase
+          database.ref(`users/${userId}/profile`).update({
+            name: playerName
+          });
+        } else {
+          // Save to localStorage
+          localStorage.setItem('playerName', playerName);
+        }
+        nameModal.style.display = 'none';
+        nameModal.setAttribute('aria-hidden', 'true');
+        updateUserDisplay();
+        startGame(currentMode); // Restart the game after saving the name
       } else {
-        // Save to localStorage
-        localStorage.setItem('playerName', playerName);
+        alert('Please enter your name.');
       }
-      nameModal.style.display = 'none';
-      nameModal.setAttribute('aria-hidden', 'true');
-      updateUserDisplay();
-      startGame(currentMode); // Restart the game after saving the name
-    } else {
-      alert('Please enter your name.');
-    }
-  };
+    };
+  }
 }
 
 // Create game board
@@ -517,10 +521,10 @@ function viewLeaderboard() {
   const modes = ['daily', 'random', 'six-letter', 'global'];
 
   modes.forEach(mode => {
-  const leaderboardDiv = document.getElementById(`leaderboard-${mode}`);
-  leaderboardDiv.innerHTML = '<p>Loading...</p>';
-  fetchLeaderboardData(mode, leaderboardDiv);
-});
+    const leaderboardDiv = document.getElementById(`leaderboard-${mode}`);
+    leaderboardDiv.innerHTML = '<p>Loading...</p>';
+    fetchLeaderboardData(mode, leaderboardDiv);
+  });
 
   // Close event listener
   document.getElementById('leaderboard-modal-close').addEventListener('click', () => {
@@ -785,7 +789,26 @@ function displayProfile() {
   });
 }
 
-// Add event listeners for tabs
+// Share Suggestions Function (Assuming it's defined elsewhere)
+function showSuggestions() {
+  // Implement your suggestions functionality here
+  alert('Suggestions feature is not implemented yet.');
+}
+
+// Statistics Tracking Trigger (Optional: You can call this function where appropriate)
+document.getElementById('display-statistics-button')?.addEventListener('click', displayStatistics);
+
+// Achievements Modal (Assuming there's a button to view achievements)
+document.getElementById('view-achievements-button')?.addEventListener('click', () => {
+  const achievementsModal = document.getElementById('achievements-modal');
+  achievementsModal.style.display = 'block';
+  achievementsModal.setAttribute('aria-hidden', 'false');
+});
+
+// Function to display achievements when achievements are updated
+// (Already handled in displayAchievements function)
+
+// Add event listeners for leaderboard, suggestions, feedback, profile, etc.
 document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
 document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
 document.getElementById('feedback-button').addEventListener('click', () => {
@@ -925,8 +948,7 @@ function updateUserDisplay() {
   }
 }
 
-
-// Profile Modal Trigger (Example: You can add a button to open profile)
+// Profile Modal Trigger (Assuming there's a button to open profile)
 document.getElementById('profile-button')?.addEventListener('click', displayProfile);
 
 // Handle Physical Keyboard Input
@@ -951,17 +973,13 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-// Start the game with default mode
-startGame('daily');
+// Function to sanitize HTML to prevent XSS
+function sanitizeHTML(str) {
+  const temp = document.createElement('div');
+  temp.textContent = str;
+  return temp.innerHTML;
+}
 
-// Suggestions Button Event Listener (Already added above)
-document.getElementById('suggestions-button').addEventListener('click', showSuggestions);
-
-document.getElementById('login-button').addEventListener('click', () => {
-  const authModal = document.getElementById('auth-modal');
-  authModal.style.display = 'block';
-  authModal.setAttribute('aria-hidden', 'false');
-});
 // Ensure that the winning modal can be closed
 document.getElementById('close-winning-modal').addEventListener('click', () => {
   const winningModal = document.getElementById('winning-modal');
@@ -969,7 +987,7 @@ document.getElementById('close-winning-modal').addEventListener('click', () => {
   winningModal.setAttribute('aria-hidden', 'true');
 });
 
-// Name Modal Close Event Listener
+// Ensure that the name modal can be closed
 document.getElementById('name-modal-close').addEventListener('click', () => {
   const nameModal = document.getElementById('name-modal');
   nameModal.style.display = 'none';
@@ -1011,29 +1029,8 @@ document.getElementById('profile-close-button').addEventListener('click', () => 
   profileModal.setAttribute('aria-hidden', 'true');
 });
 
-// Function to sanitize HTML to prevent XSS
-function sanitizeHTML(str) {
-  const temp = document.createElement('div');
-  temp.textContent = str;
-  return temp.innerHTML;
-}
-
-// Optional: Automatically focus input fields when certain modals are opened, like the name modal or login modal
-document.getElementById('save-name-button').addEventListener('click', () => {
-  const nameModal = document.getElementById('name-modal');
-  const playerNameInput = document.getElementById('player-name-input');
-  playerName = playerNameInput.value.trim();
-
-  if (playerName) {
-    localStorage.setItem('playerName', playerName);
-    nameModal.style.display = 'none';
-    nameModal.setAttribute('aria-hidden', 'true');
-    updateUserDisplay();
-    startGame(currentMode); // Restart the game after name is set
-  } else {
-    alert('Please enter your name.');
-  }
-});
+// Profile Modal Trigger (Assuming there's a button to open profile)
+document.getElementById('profile-button')?.addEventListener('click', displayProfile);
 
 // Function to open specific leaderboard tab
 function openLeaderboardTab(tabName) {
