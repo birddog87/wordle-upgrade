@@ -8,7 +8,6 @@ var firebaseConfig = {
 };
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-// Removed firebase.analytics(); as it's optional and may cause issues if not set up
 var database = firebase.database();
 var auth = firebase.auth();
 
@@ -430,21 +429,35 @@ function showWinningAnimation() {
       console.error('Error fetching word details:', error);
     });
 
-  // Confetti animation
+  // Trigger the confetti animation
   triggerConfetti();
 }
 
 // Function to trigger confetti animation
 function triggerConfetti() {
-  const canvas = document.getElementById('confetti-canvas');
-  const confettiSettings = { target: canvas };
-  const confetti = new ConfettiGenerator(confettiSettings);
-  confetti.render();
+  const end = Date.now() + (5 * 1000); // Run for 5 seconds
 
-  // Stop the confetti after 5 seconds
-  setTimeout(() => {
-    confetti.clear();
-  }, 5000);
+  // Confetti animation frame function
+  (function frame() {
+    // Launch confetti from random positions
+    confetti({
+      particleCount: 5,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0 },
+    });
+    confetti({
+      particleCount: 5,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1 },
+    });
+
+    // Continue the animation if time hasn't expired
+    if (Date.now() < end) {
+      requestAnimationFrame(frame);
+    }
+  }());
 }
 
 // Fetch word definition from dictionary API
@@ -797,10 +810,23 @@ function displayLeaderboard(data, mode) {
   }
 
   const allEntries = [];
-  Object.values(data).forEach(entry => {
-    allEntries.push(entry);
-  });
 
+  // Function to recursively extract entries
+  function extractEntries(obj) {
+    Object.values(obj).forEach(value => {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        if (value.player) {
+          allEntries.push(value);
+        } else {
+          extractEntries(value);
+        }
+      }
+    });
+  }
+
+  extractEntries(data);
+
+  // Sort the entries
   allEntries.sort((a, b) => {
     if (a.won !== b.won) return b.won - a.won; // Sort by wins first
     if (a.attempts !== b.attempts) return a.attempts - b.attempts; // Then by attempts
@@ -808,6 +834,7 @@ function displayLeaderboard(data, mode) {
   });
 
   let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Date</th><th>Time (s)</th><th>Attempts</th></tr>';
+
   allEntries.slice(0, 10).forEach((entry, index) => {
     leaderboardHTML += `<tr>
       <td>${index + 1}</td>
@@ -817,6 +844,7 @@ function displayLeaderboard(data, mode) {
       <td>${entry.attempts}</td>
     </tr>`;
   });
+
   leaderboardHTML += '</table>';
   return leaderboardHTML;
 }

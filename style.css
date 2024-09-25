@@ -368,19 +368,24 @@ textarea {
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 10px;
+  table-layout: fixed;
 }
 
 th, td {
-  border: 1px solid #555;
   padding: 8px;
   text-align: center;
-  font-size: 0.9rem;
+  word-wrap: break-word;
 }
 
 th {
-  background-color: #333;
-  color: #FFFFFF;
+  font-weight: bold;
+}
+
+@media screen and (max-width: 600px) {
+  th, td {
+    font-size: 12px;
+    padding: 4px;
+  }
 }
 
 tr:nth-child(even) {
