@@ -8,7 +8,7 @@ var firebaseConfig = {
 };
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-firebase.analytics();
+// Removed firebase.analytics(); as it's optional and may cause issues if not set up
 var database = firebase.database();
 var auth = firebase.auth();
 
@@ -359,6 +359,7 @@ function logResult(won, mode) {
   const log = {
     player: playerName,
     time: endTime.toLocaleString(),
+    date: today, // Add date to the log
     timeTaken: timeTaken,
     attempts: guesses.length,
     word: targetWord.toUpperCase(),
@@ -367,7 +368,7 @@ function logResult(won, mode) {
 
   if (userId) {
     // Save the log to Firebase under the appropriate mode and date
-    database.ref(`leaderboard/${mode}/${today}/` + Date.now()).set(log)
+    database.ref(`leaderboard/${mode}/` + Date.now()).set(log)
       .catch(error => {
         console.error('Error writing to leaderboard:', error);
         alert('Unable to log your game result. Please try again later.');
@@ -429,7 +430,21 @@ function showWinningAnimation() {
       console.error('Error fetching word details:', error);
     });
 
-  // Confetti animation can be added here if desired
+  // Confetti animation
+  triggerConfetti();
+}
+
+// Function to trigger confetti animation
+function triggerConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const confettiSettings = { target: canvas };
+  const confetti = new ConfettiGenerator(confettiSettings);
+  confetti.render();
+
+  // Stop the confetti after 5 seconds
+  setTimeout(() => {
+    confetti.clear();
+  }, 5000);
 }
 
 // Fetch word definition from dictionary API
@@ -782,10 +797,8 @@ function displayLeaderboard(data, mode) {
   }
 
   const allEntries = [];
-  Object.values(data).forEach(dateEntries => {
-    Object.values(dateEntries).forEach(entry => {
-      allEntries.push(entry);
-    });
+  Object.values(data).forEach(entry => {
+    allEntries.push(entry);
   });
 
   allEntries.sort((a, b) => {
@@ -794,11 +807,12 @@ function displayLeaderboard(data, mode) {
     return a.timeTaken - b.timeTaken; // Finally by time taken
   });
 
-  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Time (s)</th><th>Attempts</th></tr>';
+  let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Date</th><th>Time (s)</th><th>Attempts</th></tr>';
   allEntries.slice(0, 10).forEach((entry, index) => {
     leaderboardHTML += `<tr>
       <td>${index + 1}</td>
       <td>${sanitizeHTML(entry.player)}</td>
+      <td>${entry.date || 'N/A'}</td>
       <td>${entry.timeTaken}</td>
       <td>${entry.attempts}</td>
     </tr>`;
