@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wordle-upgrade-cache-v1';
+const CACHE_NAME = 'wordle-upgrade-cache-v2'; // Updated cache version
 const urlsToCache = [
   '/',
   '/index.html',

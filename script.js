@@ -8,7 +8,6 @@ var firebaseConfig = {
 };
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-// Removed firebase.analytics(); as it's optional and may cause issues if not set up
 var database = firebase.database();
 var auth = firebase.auth();
 
@@ -23,6 +22,7 @@ let startTime;
 let playerName = '';
 let validWordsSet = new Set();
 let currentMode = 'daily';
+let correctPositions = []; // Track correct positions for animations
 
 // User ID for Firebase (after authentication)
 let userId = null;
@@ -60,6 +60,12 @@ function updateModeIndicator(mode) {
 document.getElementById('daily-mode-button').addEventListener('click', () => startGame('daily'));
 document.getElementById('random-mode-button').addEventListener('click', () => startGame('random'));
 document.getElementById('six-letter-mode-button').addEventListener('click', () => startGame('six-letter'));
+document.getElementById('tv-mode-button').addEventListener('click', toggleTVMode);
+
+// TV Mode Toggle
+function toggleTVMode() {
+  document.body.classList.toggle('tv-mode');
+}
 
 // Start the game based on mode
 async function startGame(mode) {
@@ -70,6 +76,7 @@ async function startGame(mode) {
   guesses = [];
   startTime = new Date();
   currentMode = mode;
+  correctPositions = new Array(wordLength).fill(false); // Reset correct positions
 
   updateModeIndicator(mode);
 
@@ -301,19 +308,28 @@ function submitGuess() {
 
       if (guessArray[i] === targetArray[i]) {
         tile.classList.add('correct');
-        if (!keyButton.classList.contains('key-correct')) {
-          keyButton.classList.add('key-correct');
+
+        // Only apply special animation if it's the first time
+        if (!correctPositions[i]) {
+          tile.classList.add('correct-first-time');
+          correctPositions[i] = true;
+          // Play pop sound
+          playPopSound();
         }
-      } else if (targetArray.includes(guessArray[i]) && !matchedIndices[targetArray.indexOf(guessArray[i])]) {
+
+        // Always set the key to 'key-correct' regardless of its current class
+        keyButton.classList.remove('key-absent', 'key-present');
+        keyButton.classList.add('key-correct');
+      } else if (targetWord.includes(guessArray[i])) {
         tile.classList.add('present');
-        if (
-          !keyButton.classList.contains('key-correct') &&
-          !keyButton.classList.contains('key-present')
-        ) {
+        // Upgrade to 'key-present' only if it's not already 'key-correct'
+        if (!keyButton.classList.contains('key-correct')) {
+          keyButton.classList.remove('key-absent');
           keyButton.classList.add('key-present');
         }
       } else {
         tile.classList.add('absent');
+        // Only set to 'key-absent' if it hasn't been marked before
         if (
           !keyButton.classList.contains('key-correct') &&
           !keyButton.classList.contains('key-present') &&
@@ -350,11 +366,17 @@ function submitGuess() {
   });
 }
 
+// Function to play pop sound
+function playPopSound() {
+  const popSound = new Audio('pop-sound.mp3'); // Ensure you have this audio file
+  popSound.play();
+}
+
 // Function to log the result to Firebase
 function logResult(won, mode) {
   const endTime = new Date();
   const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
-  const today = new Date().toLocaleDateString(); // e.g., "9/24/2024"
+  const today = new Date().toLocaleDateString('en-CA'); // e.g., "2024-09-25"
 
   const log = {
     player: playerName,
@@ -368,7 +390,7 @@ function logResult(won, mode) {
 
   if (userId) {
     // Save the log to Firebase under the appropriate mode and date
-    database.ref(`leaderboard/${mode}/` + Date.now()).set(log)
+    database.ref(`leaderboard/${mode}/${today}/${Date.now()}`).set(log)
       .catch(error => {
         console.error('Error writing to leaderboard:', error);
         alert('Unable to log your game result. Please try again later.');
@@ -434,32 +456,33 @@ function showWinningAnimation() {
   triggerConfetti();
 }
 
-
 // Function to trigger confetti animation
 function triggerConfetti() {
+  const confettiCanvas = document.getElementById('confetti-canvas');
+  const myConfetti = confetti.create(confettiCanvas, { resize: true, useWorker: true });
   const end = Date.now() + (5 * 1000); // Run for 5 seconds
 
   // Confetti animation frame function
   (function frame() {
     // Launch confetti from random positions
-    confetti({
+    myConfetti({
       particleCount: 5,
       angle: 60,
       spread: 55,
-      origin: { x: 0 },
+      origin: { x: Math.random() },
     });
-    confetti({
+    myConfetti({
       particleCount: 5,
       angle: 120,
       spread: 55,
-      origin: { x: 1 },
+      origin: { x: Math.random() },
     });
 
     // Continue the animation if time hasn't expired
     if (Date.now() < end) {
       requestAnimationFrame(frame);
     }
-  }());
+  })();
 }
 
 // Fetch word definition from dictionary API
@@ -778,25 +801,27 @@ function viewLeaderboard() {
       tabContents.forEach(content => content.classList.remove('active'));
       const activeContent = document.getElementById(tab.getAttribute('data-tab'));
       activeContent.classList.add('active');
+
+      // Fetch leaderboard data for the active tab
+      const mode = tab.getAttribute('data-tab').replace('leaderboard-', '');
+      fetchLeaderboardData(mode, activeContent);
     });
   });
 
-  // Fetch and display leaderboard data for each mode
-  const modes = ['daily', 'random', 'six-letter', 'global'];
-
-  modes.forEach(mode => {
-    const leaderboardDiv = document.getElementById(`leaderboard-${mode}`);
-    leaderboardDiv.innerHTML = '<p>Loading...</p>';
-    fetchLeaderboardData(mode, leaderboardDiv);
-  });
+  // Fetch and display leaderboard data for the active tab
+  const activeTab = document.querySelector('.tablink.active').getAttribute('data-tab');
+  const mode = activeTab.replace('leaderboard-', '');
+  const container = document.getElementById(activeTab);
+  fetchLeaderboardData(mode, container);
 }
 
 // Fetch leaderboard data
 function fetchLeaderboardData(mode, container) {
+  const selectedDate = document.getElementById('leaderboard-date').value;
   database.ref(`leaderboard/${mode}`).once('value')
     .then(snapshot => {
       const data = snapshot.val();
-      const leaderboardHTML = displayLeaderboard(data, mode);
+      const leaderboardHTML = displayLeaderboard(data, mode, selectedDate);
       container.innerHTML = leaderboardHTML;
     })
     .catch(error => {
@@ -805,9 +830,8 @@ function fetchLeaderboardData(mode, container) {
     });
 }
 
-
 // Display leaderboard
-function displayLeaderboard(data, mode) {
+function displayLeaderboard(data, mode, selectedDate) {
   if (!data) {
     return `<p>No leaderboard data available for ${mode} mode.</p>`;
   }
@@ -815,19 +839,32 @@ function displayLeaderboard(data, mode) {
   const allEntries = [];
 
   // Function to recursively extract entries
-  function extractEntries(obj) {
-    Object.values(obj).forEach(value => {
+  function extractEntries(obj, path = '') {
+    Object.keys(obj).forEach(key => {
+      const value = obj[key];
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         if (value.player) {
-          allEntries.push(value);
+          // Filter by selected date if provided
+          if (selectedDate) {
+            const entryDate = value.date || '';
+            if (entryDate === selectedDate) {
+              allEntries.push(value);
+            }
+          } else {
+            allEntries.push(value);
+          }
         } else {
-          extractEntries(value);
+          extractEntries(value, path + '/' + key);
         }
       }
     });
   }
 
   extractEntries(data);
+
+  if (allEntries.length === 0) {
+    return `<p>No leaderboard data available for ${mode} mode on the selected date.</p>`;
+  }
 
   // Sort the entries
   allEntries.sort((a, b) => {
@@ -838,11 +875,16 @@ function displayLeaderboard(data, mode) {
 
   let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Date</th><th>Time (s)</th><th>Attempts</th></tr>';
 
+  const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+
   allEntries.slice(0, 10).forEach((entry, index) => {
+    const date = new Date(entry.time);
+    const formattedDate = date.toLocaleDateString('en-US', dateOptions);
+
     leaderboardHTML += `<tr>
       <td>${index + 1}</td>
       <td>${sanitizeHTML(entry.player)}</td>
-      <td>${entry.date || 'N/A'}</td>
+      <td>${formattedDate}</td>
       <td>${entry.timeTaken}</td>
       <td>${entry.attempts}</td>
     </tr>`;
@@ -852,6 +894,13 @@ function displayLeaderboard(data, mode) {
   return leaderboardHTML;
 }
 
+// Add event listener for date input
+document.getElementById('leaderboard-date').addEventListener('change', () => {
+  const activeTab = document.querySelector('.tablink.active').getAttribute('data-tab');
+  const mode = activeTab.replace('leaderboard-', '');
+  const container = document.getElementById(activeTab);
+  fetchLeaderboardData(mode, container);
+});
 
 // Add event listener for view leaderboard button
 document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);

@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Wordle Upgrade</title>
-  
   <!-- Favicon and Apple Touch Icons -->
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -23,6 +22,9 @@
   <!-- Chart.js for Statistics Visualization -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"></script>
 
+  <!-- Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -36,9 +38,6 @@
         <button type="button" id="login-button">Login</button>
         <button type="button" id="logout-button" style="display: none;">Logout</button>
       </div>
-
-      <!-- TV Mode Toggle Button -->
-      <button type="button" id="tv-mode-button">TV Mode</button>
     </header>
 
     <!-- Mode Indicator -->
@@ -49,6 +48,7 @@
       <button type="button" id="daily-mode-button">Word of the Day</button>
       <button type="button" id="random-mode-button">Random Word</button>
       <button type="button" id="six-letter-mode-button">6-Letter Word</button>
+      <button type="button" id="tv-mode-button">TV Mode</button>
       <button type="button" id="view-leaderboard">View Leaderboard</button>
       <button type="button" id="feedback-button">Feedback</button>
     </div>
@@ -90,14 +90,16 @@
         <button class="tablink active" data-tab="leaderboard-daily">Daily Word</button>
         <button class="tablink" data-tab="leaderboard-random">Random Word</button>
         <button class="tablink" data-tab="leaderboard-six-letter">6-Letter Word</button>
-        <button class="tablink" data-tab="leaderboard-global">Global</button>
       </div>
+
+      <!-- Date Filter -->
+      <label for="leaderboard-date">Select Date:</label>
+      <input type="date" id="leaderboard-date">
 
       <!-- Tab Contents -->
       <div id="leaderboard-daily" class="tabcontent active"></div>
       <div id="leaderboard-random" class="tabcontent"></div>
       <div id="leaderboard-six-letter" class="tabcontent"></div>
-      <div id="leaderboard-global" class="tabcontent"></div>
     </div>
   </div>
 
@@ -117,6 +119,7 @@
       <span class="close" id="close-winning-modal" aria-label="Close">&times;</span>
       <h2 id="winning-modal-title">Congratulations!</h2>
       <h3 id="winning-word-display"></h3>
+      <!-- Confetti Canvas -->
       <canvas id="confetti-canvas"></canvas>
       <div id="word-definition"></div>
       <div class="share-buttons">
@@ -171,7 +174,5 @@
 
   <!-- Include scripts -->
   <script src="script.js"></script>
-  <!-- Confetti -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
 </body>
 </html>
