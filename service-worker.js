@@ -5,6 +5,11 @@ const urlsToCache = [
   '/style.css',
   '/script.js',
   '/words_en.txt',
+  '/icons/apple-touch-icon.png',
+  '/icons/favicon-32x32.png',
+  '/icons/favicon-16x16.png',
+  '/manifest.json',
+  '/pop-sound.mp3', // Ensure this path is correct
   // Add other assets like images, icons, etc.
 ];
 
