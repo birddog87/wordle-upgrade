@@ -335,14 +335,14 @@ function submitGuess() {
       setTimeout(() => {
         showWinningAnimation();
         logResult(true, currentMode);
-        updateAchievements();
+        updateAchievements(); // Ensure this function is defined
       }, 500);
     } else if (guesses.length === maxGuesses) {
       gameActive = false;
       setTimeout(() => {
         alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
         logResult(false, currentMode);
-        updateAchievements();
+        updateAchievements(); // Ensure this function is defined
       }, 500);
     }
 
@@ -354,7 +354,7 @@ function submitGuess() {
 function logResult(won, mode) {
   const endTime = new Date();
   const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
-  const today = new Date().toLocaleDateString(); // e.g., "9/17/2024"
+  const today = new Date().toLocaleDateString(); // e.g., "9/24/2024"
 
   const log = {
     player: playerName,
@@ -365,15 +365,19 @@ function logResult(won, mode) {
     won: won,
   };
 
-  // Save the log to Firebase under the appropriate mode and date
-  database.ref(`leaderboard/${mode}/${today}/` + Date.now()).set(log)
-    .catch(error => {
-      console.error('Error writing to leaderboard:', error);
-      alert('Unable to log your game result. Please try again later.');
-    });
+  if (userId) {
+    // Save the log to Firebase under the appropriate mode and date
+    database.ref(`leaderboard/${mode}/${today}/` + Date.now()).set(log)
+      .catch(error => {
+        console.error('Error writing to leaderboard:', error);
+        alert('Unable to log your game result. Please try again later.');
+      });
 
-  // Update user statistics
-  updateUserStats(won, guesses.length);
+    // Update user statistics
+    updateUserStats(won, guesses.length);
+  } else {
+    alert('Please log in to save your game results.');
+  }
 }
 
 // Show invalid guess animation
@@ -634,6 +638,12 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
+// Login Button Event Listener
+document.getElementById('login-button').addEventListener('click', () => {
+  authModalElement.style.display = 'block';
+  authModalElement.setAttribute('aria-hidden', 'false');
+});
+
 // Email Sign-In Button
 document.getElementById('email-signin-button').addEventListener('click', () => {
   authModalElement.style.display = 'none';
@@ -695,21 +705,19 @@ document.getElementById('email-signup-submit-button').addEventListener('click', 
 });
 
 // Logout functionality
-if (document.getElementById('logout-button')) {
-  document.getElementById('logout-button').addEventListener('click', () => {
-    auth.signOut().then(() => {
-      console.log('User signed out');
-      userId = null;
-      playerName = '';
-      localStorage.removeItem('playerName');
-      updateUserDisplay();
-      // Optionally, restart the game
-      startGame('daily');
-    }).catch((error) => {
-      console.error('Error signing out:', error);
-    });
+document.getElementById('logout-button').addEventListener('click', () => {
+  auth.signOut().then(() => {
+    console.log('User signed out');
+    userId = null;
+    playerName = '';
+    localStorage.removeItem('playerName');
+    updateUserDisplay();
+    // Optionally, restart the game
+    startGame('daily');
+  }).catch((error) => {
+    console.error('Error signing out:', error);
   });
-}
+});
 
 // Ensure modals have close buttons and event listeners
 const modals = document.querySelectorAll('.modal');
@@ -807,3 +815,9 @@ window.addEventListener('load', () => {
   console.log('Page loaded, initializing game');
   startGame('daily');
 });
+
+// Define updateAchievements function to prevent ReferenceError
+function updateAchievements() {
+  // Placeholder function
+  console.log('updateAchievements called');
+}
