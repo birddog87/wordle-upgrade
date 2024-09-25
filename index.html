@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Wordle Upgrade</title>
+  
   <!-- Favicon and Apple Touch Icons -->
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -35,6 +36,9 @@
         <button type="button" id="login-button">Login</button>
         <button type="button" id="logout-button" style="display: none;">Logout</button>
       </div>
+
+      <!-- TV Mode Toggle Button -->
+      <button type="button" id="tv-mode-button">TV Mode</button>
     </header>
 
     <!-- Mode Indicator -->
@@ -42,10 +46,9 @@
 
     <!-- Mode Selection Buttons -->
     <div class="mode-selection">
-      <button type="button" id="daily-mode-button" class="active">Word of the Day</button>
+      <button type="button" id="daily-mode-button">Word of the Day</button>
       <button type="button" id="random-mode-button">Random Word</button>
       <button type="button" id="six-letter-mode-button">6-Letter Word</button>
-      <button type="button" id="tv-mode-button">TV Mode</button> <!-- TV Mode Button -->
       <button type="button" id="view-leaderboard">View Leaderboard</button>
       <button type="button" id="feedback-button">Feedback</button>
     </div>
@@ -168,7 +171,7 @@
 
   <!-- Include scripts -->
   <script src="script.js"></script>
-  <!-- Confetti Library -->
+  <!-- Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
 </body>
 </html>

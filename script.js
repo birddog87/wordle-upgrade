@@ -30,9 +30,6 @@ let userId = null;
 // Streak Counter
 let currentStreak = 0;
 
-// Preload Pop Sound
-const popSound = new Audio('sounds/pop.mp3'); // Ensure you have a 'sounds' directory with 'pop.mp3'
-
 // Load word list
 async function loadWordList() {
   try {
@@ -63,22 +60,6 @@ function updateModeIndicator(mode) {
 document.getElementById('daily-mode-button').addEventListener('click', () => startGame('daily'));
 document.getElementById('random-mode-button').addEventListener('click', () => startGame('random'));
 document.getElementById('six-letter-mode-button').addEventListener('click', () => startGame('six-letter'));
-
-// Event listener for TV Mode button
-document.getElementById('tv-mode-button').addEventListener('click', toggleTVMode);
-
-// Function to toggle TV Mode
-function toggleTVMode() {
-  document.body.classList.toggle('tv-mode');
-  const tvButton = document.getElementById('tv-mode-button');
-  if (document.body.classList.contains('tv-mode')) {
-    tvButton.textContent = 'Regular Mode';
-    console.log('TV Mode Activated');
-  } else {
-    tvButton.textContent = 'TV Mode';
-    console.log('TV Mode Deactivated');
-  }
-}
 
 // Start the game based on mode
 async function startGame(mode) {
@@ -286,10 +267,6 @@ function updateBoard() {
     tile.textContent = currentGuess[i] ? currentGuess[i].toUpperCase() : '';
     tile.classList.remove('invalid');
     tile.classList.remove('flip');
-    tile.classList.remove('fill-animation');
-    tile.classList.remove('pop-shake');
-    tile.style.height = '60px'; // Reset height for animation
-    tile.style.backgroundColor = '#121213'; // Reset background color
   }
 
   console.log('Board updated. Current guess:', currentGuess);
@@ -324,14 +301,6 @@ function submitGuess() {
 
       if (guessArray[i] === targetArray[i]) {
         tile.classList.add('correct');
-        tile.classList.add('fill-animation'); // Start fill animation
-
-        // After fill animation completes (2s), play pop sound and shake
-        setTimeout(() => {
-          tile.classList.add('pop-shake');
-          popSound.play();
-        }, 2000);
-
         if (!keyButton.classList.contains('key-correct')) {
           keyButton.classList.add('key-correct');
         }
@@ -361,7 +330,7 @@ function submitGuess() {
   Promise.all(animationPromises).then(() => {
     guesses.push(currentGuess);
 
-    if (currentGuess.toLowerCase() === targetWord.toLowerCase()) {
+    if (currentGuess === targetWord) {
       gameActive = false;
       setTimeout(() => {
         showWinningAnimation();
@@ -465,28 +434,28 @@ function showWinningAnimation() {
   triggerConfetti();
 }
 
+
 // Function to trigger confetti animation
 function triggerConfetti() {
-  const duration = 5 * 1000; // 5 seconds
-  const end = Date.now() + duration;
+  const end = Date.now() + (5 * 1000); // Run for 5 seconds
 
-  // Launch confetti periodically
+  // Confetti animation frame function
   (function frame() {
+    // Launch confetti from random positions
     confetti({
       particleCount: 5,
       angle: 60,
       spread: 55,
       origin: { x: 0 },
-      colors: ['#538D4E', '#B59F3B', '#3A3A3C'],
     });
     confetti({
       particleCount: 5,
       angle: 120,
       spread: 55,
       origin: { x: 1 },
-      colors: ['#538D4E', '#B59F3B', '#3A3A3C'],
     });
 
+    // Continue the animation if time hasn't expired
     if (Date.now() < end) {
       requestAnimationFrame(frame);
     }
@@ -544,9 +513,9 @@ function generateShareText() {
   guesses.forEach(guess => {
     let rowResult = '';
     for (let i = 0; i < wordLength; i++) {
-      if (guess[i].toLowerCase() === targetWord[i].toLowerCase()) {
+      if (guess[i] === targetWord[i]) {
         rowResult += '🟩';
-      } else if (targetWord.toLowerCase().includes(guess[i].toLowerCase())) {
+      } else if (targetWord.includes(guess[i])) {
         rowResult += '🟨';
       } else {
         rowResult += '⬛';
@@ -705,73 +674,64 @@ document.getElementById('login-button').addEventListener('click', () => {
   authModalElement.setAttribute('aria-hidden', 'false');
 });
 
-// Email Sign-In and Sign-Up Buttons
+// Email Sign-In Button
 document.getElementById('email-signin-button').addEventListener('click', () => {
-  openEmailAuthModal('Sign In');
-});
-
-document.getElementById('email-signup-button').addEventListener('click', () => {
-  openEmailAuthModal('Sign Up');
-});
-
-// Function to open Email Authentication Modal with appropriate title
-function openEmailAuthModal(action) {
   authModalElement.style.display = 'none';
   authModalElement.setAttribute('aria-hidden', 'true');
   emailAuthModalElement.style.display = 'block';
   emailAuthModalElement.setAttribute('aria-hidden', 'false');
-  document.getElementById('email-auth-modal-title').textContent = action;
-  document.getElementById('email-signin-submit-button').textContent = action === 'Sign In' ? 'Sign In' : 'Sign Up';
-  document.getElementById('email-signup-submit-button').style.display = action === 'Sign In' ? 'none' : 'block';
-}
+});
 
-// Email Authentication Submit
+// Email Sign-In Submit
 document.getElementById('email-signin-submit-button').addEventListener('click', () => {
   const email = document.getElementById('user-email').value.trim();
   const password = document.getElementById('user-password').value.trim();
   if (email && password) {
-    const action = document.getElementById('email-signin-submit-button').textContent;
-    if (action === 'Sign In') {
-      auth.signInWithEmailAndPassword(email, password)
-        .then(() => {
-          // Success: Close the email auth modal
-          emailAuthModalElement.style.display = 'none';
-          emailAuthModalElement.setAttribute('aria-hidden', 'true');
-          authModalElement.style.display = 'none';
-          authModalElement.setAttribute('aria-hidden', 'true');
-        })
-        .catch(error => {
-          console.error('Email Sign-In Error:', error);
-          alert('Error signing in. Please check your credentials.');
-        });
-    } else if (action === 'Sign Up') {
-      auth.createUserWithEmailAndPassword(email, password)
-        .then(() => {
-          // Success: Close the email auth modal
-          emailAuthModalElement.style.display = 'none';
-          emailAuthModalElement.setAttribute('aria-hidden', 'true');
-          authModalElement.style.display = 'none';
-          authModalElement.setAttribute('aria-hidden', 'true');
-        })
-        .catch(error => {
-          console.error('Email Sign-Up Error:', error);
-          alert('Error signing up. Please try a different email.');
-        });
-    }
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        // Success: Close the email auth modal
+        emailAuthModalElement.style.display = 'none';
+        emailAuthModalElement.setAttribute('aria-hidden', 'true');
+        authModalElement.style.display = 'none';
+        authModalElement.setAttribute('aria-hidden', 'true');
+      })
+      .catch(error => {
+        console.error('Email Sign-In Error:', error);
+        alert('Error signing in. Please check your credentials.');
+      });
   } else {
     alert('Please enter both email and password.');
   }
 });
 
-// Hide or show appropriate buttons in Email Auth Modal based on action
-document.getElementById('email-signin-button').addEventListener('click', () => {
-  document.getElementById('email-signin-submit-button').style.display = 'block';
-  document.getElementById('email-signup-submit-button').style.display = 'none';
+// Email Sign-Up Button
+document.getElementById('email-signup-button').addEventListener('click', () => {
+  authModalElement.style.display = 'none';
+  authModalElement.setAttribute('aria-hidden', 'true');
+  emailAuthModalElement.style.display = 'block';
+  emailAuthModalElement.setAttribute('aria-hidden', 'false');
 });
 
-document.getElementById('email-signup-button').addEventListener('click', () => {
-  document.getElementById('email-signin-submit-button').style.display = 'none';
-  document.getElementById('email-signup-submit-button').style.display = 'block';
+// Email Sign-Up Submit
+document.getElementById('email-signup-submit-button').addEventListener('click', () => {
+  const email = document.getElementById('user-email').value.trim();
+  const password = document.getElementById('user-password').value.trim();
+  if (email && password) {
+    auth.createUserWithEmailAndPassword(email, password)
+      .then(() => {
+        // Success: Close the email auth modal
+        emailAuthModalElement.style.display = 'none';
+        emailAuthModalElement.setAttribute('aria-hidden', 'true');
+        authModalElement.style.display = 'none';
+        authModalElement.setAttribute('aria-hidden', 'true');
+      })
+      .catch(error => {
+        console.error('Email Sign-Up Error:', error);
+        alert('Error signing up. Please try a different email.');
+      });
+  } else {
+    alert('Please enter both email and password.');
+  }
 });
 
 // Logout functionality
@@ -845,6 +805,7 @@ function fetchLeaderboardData(mode, container) {
     });
 }
 
+
 // Display leaderboard
 function displayLeaderboard(data, mode) {
   if (!data) {
@@ -890,6 +851,7 @@ function displayLeaderboard(data, mode) {
   leaderboardHTML += '</table>';
   return leaderboardHTML;
 }
+
 
 // Add event listener for view leaderboard button
 document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
