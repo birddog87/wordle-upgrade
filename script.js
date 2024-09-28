@@ -1,11 +1,11 @@
 (function() {
-  // Initialize Firebase with provided configuration
-  var firebaseConfig = {
+  // Initialize Firebase (Using your Firebase project's configuration)
+  Your Firebase configuration
     apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs",
-    authDomain: "wordle-upgrade-c055f.firebaseapp.com",
-    databaseURL: "https://wordle-upgrade-c055f-default-rtdb.firebaseio.com",
-    projectId: "wordle-upgrade-c055f",
-    appId: "1:683362789332:web:e3aeb537a5f96773e85841",
+  authDomain: "wordle-upgrade-c055f.firebaseapp.com",
+  databaseURL: "https://wordle-upgrade-c055f-default-rtdb.firebaseio.com",
+  projectId: "wordle-upgrade-c055f",
+  appId: "1:683362789332:web:e3aeb537a5f96773e85841",
   };
   // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
@@ -916,7 +916,6 @@
   function updateAchievements() {
     // Placeholder function
     console.log('updateAchievements called');
-    // Implement achievement logic here
   }
 
 })();
