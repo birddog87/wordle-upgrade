@@ -74,12 +74,14 @@
     if (dailyAttempted) {
       try {
         const attemptData = JSON.parse(dailyAttempted);
+        console.log('Parsed dailyAttempted data:', attemptData); // Log the parsed data
         if (attemptData.date === today) {
           showDailyAttemptModal(attemptData);
           return;
         }
       } catch (error) {
         console.error('Error parsing dailyAttempted data:', error);
+        console.log('Raw dailyAttempted data:', dailyAttempted); // Log the raw data
         // If there's an error parsing, we'll just continue with the game
         localStorage.removeItem('dailyAttempted'); // Clear the invalid data
       }
@@ -440,7 +442,9 @@
 
   if (mode === 'daily') {
     try {
-      localStorage.setItem('dailyAttempted', JSON.stringify(log));
+      const logString = JSON.stringify(log);
+      localStorage.setItem('dailyAttempted', logString);
+      console.log('Stored dailyAttempted data:', logString); // Log the stored data
     } catch (error) {
       console.error('Error storing daily attempt data:', error);
     }
