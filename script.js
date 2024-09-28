@@ -71,9 +71,12 @@
       const today = new Date().toLocaleDateString('en-CA');
       const dailyAttempted = localStorage.getItem('dailyAttempted');
       
-      if (dailyAttempted === today) {
-        alert("You've already attempted today's word. Please try again tomorrow!");
-        return;
+      if (dailyAttempted) {
+        const attemptData = JSON.parse(dailyAttempted);
+        if (attemptData.date === today) {
+          showDailyAttemptModal(attemptData);
+          return;
+        }
       }
     }
     
@@ -108,6 +111,33 @@
     createBoard();
     createKeyboard();
     updateBoard();
+  }
+  // Show the daily attempt modal
+  function showDailyAttemptModal(attemptData) {
+    const modal = document.getElementById('daily-attempt-modal');
+    const content = document.getElementById('daily-attempt-content');
+    const username = playerName || 'there';
+    const result = attemptData.won ? 'succeeded' : 'failed';
+    
+    content.innerHTML = `
+      <p>Hey ${username}, don't be cheeky and try to do the daily word again!</p>
+      <p>You already tried and ${result} getting "${attemptData.word}" in ${attemptData.timeTaken} seconds and in ${attemptData.attempts} attempts.</p>
+      <p>If you want to keep the fun going, try random mode or if you're up to the challenge, 6 letter mode!</p>
+      <button id="random-mode-link">Try Random Mode</button>
+      <button id="six-letter-mode-link">Try 6 Letter Mode</button>
+    `;
+
+    modal.style.display = 'block';
+
+    document.getElementById('random-mode-link').addEventListener('click', () => {
+      modal.style.display = 'none';
+      startGame('random');
+    });
+
+    document.getElementById('six-letter-mode-link').addEventListener('click', () => {
+      modal.style.display = 'none';
+      startGame('six-letter');
+    });
   }
 
   // Function to get a random word
@@ -385,7 +415,7 @@
   }
 
   // Function to log the result to Firebase
-  function logResult(won, mode) {
+ function logResult(won, mode) {
     const endTime = new Date();
     const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
     const today = new Date().toLocaleDateString('en-CA'); // e.g., "2024-09-25"
@@ -393,12 +423,16 @@
     const log = {
       player: playerName,
       time: endTime.toLocaleString(),
-      date: today, // Add date to the log
+      date: today,
       timeTaken: timeTaken,
       attempts: guesses.length,
       word: targetWord.toUpperCase(),
       won: won,
     };
+
+    if (mode === 'daily') {
+      localStorage.setItem('dailyAttempted', JSON.stringify(log));
+    }
 
     if (userId) {
       // Save the log to Firebase under the appropriate mode and date
@@ -920,7 +954,7 @@
   // Initialize the game on page load
   window.addEventListener('load', () => {
     console.log('Page loaded, initializing game');
-    startGame('daily');
+    startGame('random');
   });
 
   // Define updateAchievements function
