@@ -142,11 +142,9 @@ h1, h2, h3 {
 /* Animation for first correct guess simulating water filling */
 @keyframes fillUp {
   0% {
-    background-color: #121213;
     transform: scaleY(0);
   }
   100% {
-    background-color: #538D4E;
     transform: scaleY(1);
   }
 }
@@ -171,6 +169,7 @@ h1, h2, h3 {
   transform: scaleY(0);
   transform-origin: bottom;
   animation: fillUp 0.5s forwards, pop 0.2s 0.5s forwards;
+  z-index: -1; /* Ensure the fill is behind the text */
 }
 
 /* Keyboard */
