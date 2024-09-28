@@ -66,6 +66,17 @@
   async function startGame(mode) {
     console.log('Starting game in mode:', mode);
     await loadWordList();
+    
+    if (mode === 'daily') {
+      const today = new Date().toLocaleDateString('en-CA');
+      const dailyAttempted = localStorage.getItem('dailyAttempted');
+      
+      if (dailyAttempted === today) {
+        alert("You've already attempted today's word. Please try again tomorrow!");
+        return;
+      }
+    }
+    
     gameActive = true;
     currentGuess = '';
     guesses = [];
@@ -347,6 +358,9 @@
           showWinningAnimation();
           logResult(true, currentMode);
           updateAchievements();
+          if (currentMode === 'daily') {
+            localStorage.setItem('dailyAttempted', new Date().toLocaleDateString('en-CA'));
+          }
         }, 500);
       } else if (guesses.length === maxGuesses) {
         gameActive = false;
@@ -354,6 +368,9 @@
           alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
           logResult(false, currentMode);
           updateAchievements();
+          if (currentMode === 'daily') {
+            localStorage.setItem('dailyAttempted', new Date().toLocaleDateString('en-CA'));
+          }
         }, 500);
       }
 
@@ -412,7 +429,7 @@
       tiles.forEach(tile => {
         tile.classList.remove('invalid');
       });
-    }, 500);
+      }, 500);
   }
 
   // Function to show the winning animation and modal
@@ -1018,5 +1035,16 @@
   document.getElementById('open-feedback').addEventListener('click', () => {
     document.getElementById('feedback-modal').style.display = 'block';
   });
+
+  // Function to close modal when clicking outside
+  window.onclick = function(event) {
+    const modals = document.getElementsByClassName('modal');
+    for (let i = 0; i < modals.length; i++) {
+      if (event.target == modals[i]) {
+        modals[i].style.display = "none";
+        modals[i].setAttribute('aria-hidden', 'true');
+      }
+    }
+  }
 
 })();
