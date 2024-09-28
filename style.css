@@ -80,8 +80,6 @@ h1, h2, h3 {
   align-items: center;
   justify-content: center;
   transition: background-color 0.3s, border-color 0.3s, transform 0.3s;
-  position: relative; /* For pseudo-element */
-  overflow: hidden; /* Hide overflow for animation */
 }
 
 /* Tile Colors */
@@ -115,10 +113,8 @@ h1, h2, h3 {
   }
   100% {
     transform: rotateX(0deg);
-    /* Remove background-color here */
   }
 }
-
 
 .tile.flip {
   animation: flip 0.5s forwards;
@@ -140,7 +136,7 @@ h1, h2, h3 {
   }
 }
 
-/* Animation for first correct guess simulating water filling */
+/* Animation for first correct guess */
 @keyframes fillUp {
   0% {
     background-color: #121213;
@@ -151,6 +147,7 @@ h1, h2, h3 {
     transform: scaleY(1);
   }
 }
+
 @keyframes pop {
   0% {
     transform: scale(1);
@@ -312,7 +309,7 @@ textarea {
   border: 1px solid #888;
   padding: 20px;
   border-radius: 10px;
-  position: relative; /* For confetti canvas */
+  position: relative; /* Ensure confetti canvas overlays correctly */
 }
 
 #confetti-canvas {
@@ -395,10 +392,6 @@ textarea {
 #profile-name {
   font-size: 1.2rem;
   margin-bottom: 20px;
-}
-
-#profile-stats-chart {
-  max-width: 100%;
 }
 
 /* Leaderboards */
@@ -600,4 +593,59 @@ tr:nth-child(even) {
 
 .tabcontent.active {
   display: block;
+}
+
+/* TV Mode Styles */
+body.tv-mode {
+  font-size: 1.5rem;
+}
+
+body.tv-mode h1 {
+  font-size: 3rem;
+}
+
+body.tv-mode .game-container {
+  padding: 40px;
+}
+
+body.tv-mode .mode-selection {
+  flex-direction: column;
+}
+
+body.tv-mode .mode-selection button {
+  padding: 20px 40px;
+  margin: 10px 0;
+  font-size: 1.2rem;
+}
+
+body.tv-mode #game-board {
+  max-width: 800px; /* Increase for TV */
+}
+
+body.tv-mode .tile {
+  width: 80px;
+  height: 80px;
+  font-size: 3rem;
+}
+
+body.tv-mode #keyboard button {
+  padding: 20px;
+  font-size: 1.2rem;
+}
+
+body.tv-mode #keyboard button.wide-button {
+  flex: 0 1 80px;
+}
+
+body.tv-mode #statistics h2 {
+  font-size: 2rem;
+}
+
+body.tv-mode #streak-counter {
+  font-size: 1.5rem;
+}
+
+body.tv-mode .modal-content {
+  width: 80%;
+  max-width: 1000px;
 }

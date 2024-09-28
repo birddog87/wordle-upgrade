@@ -61,7 +61,12 @@
   document.getElementById('daily-mode-button').addEventListener('click', () => startGame('daily'));
   document.getElementById('random-mode-button').addEventListener('click', () => startGame('random'));
   document.getElementById('six-letter-mode-button').addEventListener('click', () => startGame('six-letter'));
-  // Removed TV mode button event listener
+  document.getElementById('tv-mode-button').addEventListener('click', toggleTVMode);
+
+  // TV Mode Toggle
+  function toggleTVMode() {
+    document.body.classList.toggle('tv-mode');
+  }
 
   // Start the game based on mode
   async function startGame(mode) {
