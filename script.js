@@ -112,6 +112,7 @@
     createKeyboard();
     updateBoard();
   }
+  
   // Show the daily attempt modal
   function showDailyAttemptModal(attemptData) {
     const modal = document.getElementById('daily-attempt-modal');
