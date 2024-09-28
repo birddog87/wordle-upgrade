@@ -79,7 +79,8 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.3s, border-color 0.3s, transform 0.3s;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Tile Colors */
@@ -136,29 +137,30 @@ h1, h2, h3 {
   }
 }
 
-/* Animation for first correct guess */
+/* Water filling animation */
 @keyframes fillUp {
   0% {
-    background-color: #121213;
-    transform: scaleY(0);
+    height: 0;
   }
   100% {
-    background-color: #538D4E;
-    transform: scaleY(1);
+    height: 100%;
   }
 }
 
-@keyframes pop {
-  0% {
-    transform: scale(1);
-  }
-  100% {
-    transform: scale(1.1);
-  }
+.tile::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  background-color: #538D4E;
+  transition: height 3s ease-out;
+  z-index: -1;
 }
 
-.tile.correct-first-time {
-  animation: fillUp 0.5s forwards, pop 0.2s 0.5s forwards;
+.tile.correct-first-time::after {
+  animation: fillUp 3s forwards;
 }
 
 /* Keyboard */
@@ -223,15 +225,15 @@ h1, h2, h3 {
 
 /* Modal Styles */
 .modal {
-  display: none; /* Hidden by default */
+  display: none;
   position: fixed;
-  z-index: 1000; /* Sit on top */
+  z-index: 1000;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
-  overflow: auto; /* Enable scroll if needed */
-  background-color: rgba(0, 0, 0, 0.8); /* Black w/ opacity */
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .modal-content {
@@ -309,7 +311,7 @@ textarea {
   border: 1px solid #888;
   padding: 20px;
   border-radius: 10px;
-  position: relative; /* Ensure confetti canvas overlays correctly */
+  position: relative;
 }
 
 #confetti-canvas {
@@ -318,8 +320,8 @@ textarea {
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none; /* Allow clicks to pass through the canvas */
-  z-index: 1000; /* Ensure it's on top of other elements */
+  pointer-events: none;
+  z-index: 1000;
 }
 
 #word-definition {
@@ -398,116 +400,22 @@ textarea {
 table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 20px;
 }
 
 th, td {
-  padding: 8px;
-  text-align: center;
-  word-wrap: break-word;
-  font-size: 0.9rem;
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #3A3A3C;
 }
 
 th {
+  background-color: #2A2A2A;
   font-weight: bold;
 }
 
 tr:nth-child(even) {
-  background-color: #2A2A2A;
-}
-
-/* Responsive Table */
-@media screen and (max-width: 600px) {
-  table, thead, tbody, th, td, tr {
-    display: block;
-  }
-
-  th {
-    position: absolute;
-    top: -9999px;
-    left: -9999px;
-  }
-
-  tr {
-    margin: 0 0 1rem 0;
-  }
-
-  td {
-    border: none;
-    position: relative;
-    padding-left: 50%;
-    text-align: left;
-  }
-
-  td:before {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 45%;
-    padding-right: 10px;
-    white-space: nowrap;
-    font-weight: bold;
-  }
-
-  td:nth-of-type(1):before { content: "Rank"; }
-  td:nth-of-type(2):before { content: "Player"; }
-  td:nth-of-type(3):before { content: "Date"; }
-  td:nth-of-type(4):before { content: "Time (s)"; }
-  td:nth-of-type(5):before { content: "Attempts"; }
-}
-
-#leaderboard-modal .modal-content {
-  overflow-x: auto;
-}
-
-#leaderboard-modal table {
-  width: 100%;
-  table-layout: fixed;
-}
-
-#leaderboard-modal th,
-#leaderboard-modal td {
-  word-wrap: break-word;
-}
-
-/* Achievements */
-.achievement {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.achievement img {
-  width: 40px;
-  height: 40px;
-  margin-right: 10px;
-}
-
-/* User Display */
-.user-display-container {
-  display: flex;
-  align-items: center;
-}
-
-.user-display-container span {
-  margin-right: 10px;
-}
-
-.user-display-container button#logout-button,
-.user-display-container button#login-button {
-  background-color: #3A3A3C;
-  color: #FFFFFF;
-  border: none;
-  padding: 8px 16px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  border-radius: 5px;
-  transition: background-color 0.3s;
-  margin-left: 10px;
-}
-
-.user-display-container button#logout-button:hover,
-.user-display-container button#login-button:hover {
-  background-color: #5A5A5C;
+  background-color: #1E1E1E;
 }
 
 /* Responsive Design */
@@ -528,14 +436,43 @@ tr:nth-child(even) {
     flex: 0 1 50px;
   }
 
-  th, td {
-    padding: 4px;
-    font-size: 0.8rem;
-  }
-
   .mode-selection button {
     padding: 8px 16px;
     font-size: 0.9rem;
+  }
+
+  /* Responsive table for mobile */
+  table, thead, tbody, th, td, tr {
+    display: block;
+  }
+
+  thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  tr {
+    margin-bottom: 15px;
+    border: 1px solid #3A3A3C;
+  }
+
+  td {
+    border: none;
+    position: relative;
+    padding-left: 50%;
+    text-align: right;
+  }
+
+  td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: 6px;
+    width: 45%;
+    padding-right: 10px;
+    white-space: nowrap;
+    text-align: left;
+    font-weight: bold;
   }
 }
 
@@ -593,59 +530,4 @@ tr:nth-child(even) {
 
 .tabcontent.active {
   display: block;
-}
-
-/* TV Mode Styles */
-body.tv-mode {
-  font-size: 1.5rem;
-}
-
-body.tv-mode h1 {
-  font-size: 3rem;
-}
-
-body.tv-mode .game-container {
-  padding: 40px;
-}
-
-body.tv-mode .mode-selection {
-  flex-direction: column;
-}
-
-body.tv-mode .mode-selection button {
-  padding: 20px 40px;
-  margin: 10px 0;
-  font-size: 1.2rem;
-}
-
-body.tv-mode #game-board {
-  max-width: 800px; /* Increase for TV */
-}
-
-body.tv-mode .tile {
-  width: 80px;
-  height: 80px;
-  font-size: 3rem;
-}
-
-body.tv-mode #keyboard button {
-  padding: 20px;
-  font-size: 1.2rem;
-}
-
-body.tv-mode #keyboard button.wide-button {
-  flex: 0 1 80px;
-}
-
-body.tv-mode #statistics h2 {
-  font-size: 2rem;
-}
-
-body.tv-mode #streak-counter {
-  font-size: 1.5rem;
-}
-
-body.tv-mode .modal-content {
-  width: 80%;
-  max-width: 1000px;
 }

@@ -1,11 +1,11 @@
 (function() {
   // Initialize Firebase (Using your Firebase project's configuration)
-  Your Firebase configuration
+  const firebaseConfig = {
     apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs",
-  authDomain: "wordle-upgrade-c055f.firebaseapp.com",
-  databaseURL: "https://wordle-upgrade-c055f-default-rtdb.firebaseio.com",
-  projectId: "wordle-upgrade-c055f",
-  appId: "1:683362789332:web:e3aeb537a5f96773e85841",
+    authDomain: "wordle-upgrade-c055f.firebaseapp.com",
+    databaseURL: "https://wordle-upgrade-c055f-default-rtdb.firebaseio.com",
+    projectId: "wordle-upgrade-c055f",
+    appId: "1:683362789332:web:e3aeb537a5f96773e85841",
   };
   // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
@@ -61,12 +61,6 @@
   document.getElementById('daily-mode-button').addEventListener('click', () => startGame('daily'));
   document.getElementById('random-mode-button').addEventListener('click', () => startGame('random'));
   document.getElementById('six-letter-mode-button').addEventListener('click', () => startGame('six-letter'));
-  document.getElementById('tv-mode-button').addEventListener('click', toggleTVMode);
-
-  // TV Mode Toggle
-  function toggleTVMode() {
-    document.body.classList.toggle('tv-mode');
-  }
 
   // Start the game based on mode
   async function startGame(mode) {
@@ -310,7 +304,7 @@
         if (guessArray[i] === targetArray[i]) {
           tile.classList.add('correct');
 
-          // Only apply special animation if it's the first time
+          // Apply water filling animation
           if (!correctPositions[i]) {
             tile.classList.add('correct-first-time');
             correctPositions[i] = true;
@@ -352,14 +346,14 @@
         setTimeout(() => {
           showWinningAnimation();
           logResult(true, currentMode);
-          updateAchievements(); // Ensure this function is defined
+          updateAchievements();
         }, 500);
       } else if (guesses.length === maxGuesses) {
         gameActive = false;
         setTimeout(() => {
           alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
           logResult(false, currentMode);
-          updateAchievements(); // Ensure this function is defined
+          updateAchievements();
         }, 500);
       }
 
@@ -883,11 +877,11 @@
       const formattedDate = date.toLocaleDateString('en-US', dateOptions);
 
       leaderboardHTML += `<tr>
-        <td>${index + 1}</td>
-        <td>${sanitizeHTML(entry.player)}</td>
-        <td>${formattedDate}</td>
-        <td>${entry.timeTaken}</td>
-        <td>${entry.attempts}</td>
+        <td data-label="Rank">${index + 1}</td>
+        <td data-label="Player">${sanitizeHTML(entry.player)}</td>
+        <td data-label="Date">${formattedDate}</td>
+        <td data-label="Time (s)">${entry.timeTaken}</td>
+        <td data-label="Attempts">${entry.attempts}</td>
       </tr>`;
     });
 
@@ -912,10 +906,117 @@
     startGame('daily');
   });
 
-  // Define updateAchievements function to prevent ReferenceError
+  // Define updateAchievements function
   function updateAchievements() {
-    // Placeholder function
-    console.log('updateAchievements called');
+    if (!userId) return;
+
+    const achievementsRef = database.ref(`users/${userId}/achievements`);
+    const statsRef = database.ref(`users/${userId}/stats`);
+
+    Promise.all([achievementsRef.once('value'), statsRef.once('value')])
+      .then(([achievementsSnapshot, statsSnapshot]) => {
+        const achievements = achievementsSnapshot.val() || {};
+        const stats = statsSnapshot.val() || {};
+
+        // Check for new achievements
+        if (stats.gamesWon >= 1 && !achievements.firstWin) {
+          achievements.firstWin = true;
+        }
+        if (stats.gamesWon >= 10 && !achievements.tenWins) {
+          achievements.tenWins = true;
+        }
+        if (stats.currentStreak >= 5 && !achievements.fiveStreak) {
+          achievements.fiveStreak = true;
+        }
+        if (stats.maxStreak >= 10 && !achievements.tenStreak) {
+          achievements.tenStreak = true;
+        }
+
+        // Update achievements in Firebase
+        achievementsRef.set(achievements);
+
+        // Display new achievements
+        displayAchievements(achievements);
+      })
+      .catch(error => {
+        console.error('Error updating achievements:', error);
+      });
   }
+
+  // Function to display achievements
+  function displayAchievements(achievements) {
+    const achievementsList = document.getElementById('achievements-list');
+    achievementsList.innerHTML = '';
+
+    const achievementItems = [
+      { key: 'firstWin', name: 'First Win', description: 'Win your first game' },
+      { key: 'tenWins', name: 'Decathlon', description: 'Win 10 games' },
+      { key: 'fiveStreak', name: 'Hot Streak', description: 'Achieve a 5-game winning streak' },
+      { key: 'tenStreak', name: 'Unstoppable', description: 'Achieve a 10-game winning streak' }
+    ];
+
+    achievementItems.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'achievement';
+      if (achievements[item.key]) {
+        li.innerHTML = `<img src="images/${item.key}.png" alt="${item.name}"> <span>${item.name}: ${item.description}</span>`;
+      } else {
+        li.innerHTML = `<img src="images/locked.png" alt="Locked"> <span>${item.name}: Locked</span>`;
+      }
+      achievementsList.appendChild(li);
+    });
+
+    // Show achievements modal
+    const achievementsModal = document.getElementById('achievements-modal');
+    achievementsModal.style.display = 'block';
+    achievementsModal.setAttribute('aria-hidden', 'false');
+  }
+
+  // Add event listener for view achievements button
+  document.getElementById('view-achievements').addEventListener('click', () => {
+    if (userId) {
+      const achievementsRef = database.ref(`users/${userId}/achievements`);
+      achievementsRef.once('value')
+        .then(snapshot => {
+          const achievements = snapshot.val() || {};
+          displayAchievements(achievements);
+        })
+        .catch(error => {
+          console.error('Error fetching achievements:', error);
+        });
+    } else {
+      alert('Please log in to view your achievements.');
+    }
+  });
+
+  // Function to handle feedback submission
+  function submitFeedback() {
+    const feedbackText = document.getElementById('feedback-text').value.trim();
+    if (feedbackText) {
+      const feedbackRef = database.ref('feedback');
+      feedbackRef.push({
+        user: userId ? playerName : 'Anonymous',
+        feedback: feedbackText,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      }).then(() => {
+        alert('Thank you for your feedback!');
+        document.getElementById('feedback-modal').style.display = 'none';
+        document.getElementById('feedback-text').value = '';
+      }).catch(error => {
+        console.error('Error submitting feedback:', error);
+        alert('There was an error submitting your feedback. Please try again.');
+      });
+    } else {
+      alert('Please enter your feedback before submitting.');
+    }
+  }
+
+  // Add event listener for feedback submission
+  document.getElementById('submit-feedback').addEventListener('click', submitFeedback);
+
+  // Add event listener for opening feedback modal
+  document.getElementById('open-feedback').addEventListener('click', () => {
+    document.getElementById('feedback-modal').style.display = 'block';
+  });
 
 })();
