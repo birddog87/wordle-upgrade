@@ -75,16 +75,7 @@
         // Instead of alert, display the daily-attempt-modal
         const dailyAttemptModal = document.getElementById('daily-attempt-modal');
         const dailyAttemptContent = document.getElementById('daily-attempt-content');
-        dailyAttemptContent.innerHTML = `
-          <p>You've already attempted today's word. Please try again tomorrow!</p>
-          <p>The word of the day was: <strong>${targetWord.toUpperCase()}</strong></p>
-          <button id="view-today-word-button">View Today's Word</button>
-        `;
-
-        // Optionally, add an event listener to the new button
-        document.getElementById('view-today-word-button').addEventListener('click', () => {
-          // Implement functionality to view today's word or related features
-        });
+        dailyAttemptContent.innerHTML = `<p>You've already attempted today's word. Please try again tomorrow!</p>`;
         dailyAttemptModal.style.display = 'block';
         dailyAttemptModal.setAttribute('aria-hidden', 'false');
         return; // Exit the function to prevent starting a new game
@@ -379,7 +370,8 @@
       } else if (guesses.length === maxGuesses) {
         gameActive = false;
         setTimeout(() => {
-          alert(`Game Over! The word was ${targetWord.toUpperCase()}.`);
+          // Replace alert with a Game Over Modal for consistency
+          showGameOverModal();
           logResult(false, currentMode);
           updateAchievements();
           if (currentMode === 'daily') {
@@ -480,6 +472,17 @@
 
     // Trigger the confetti animation
     triggerConfetti();
+  }
+
+  // Function to show the Game Over modal
+  function showGameOverModal() {
+    const gameOverModal = document.getElementById('game-over-modal');
+    gameOverModal.style.display = 'block';
+    gameOverModal.setAttribute('aria-hidden', 'false');
+
+    // Display the correct word
+    const gameOverWordDisplay = document.getElementById('game-over-word-display');
+    gameOverWordDisplay.textContent = `The word was: ${targetWord.toUpperCase()}`;
   }
 
   // Function to trigger confetti animation
@@ -684,15 +687,18 @@
     const userDisplay = document.getElementById('user-display');
     const loginButton = document.getElementById('login-button');
     const logoutButton = document.getElementById('logout-button');
+    const profileButton = document.getElementById('profile-button'); // Get Profile Button
 
     if (userId) {
       userDisplay.textContent = 'Logged in as: ' + playerName;
       logoutButton.style.display = 'inline-block';
       loginButton.style.display = 'none';
+      profileButton.style.display = 'inline-block'; // Show Profile Button
     } else {
       userDisplay.textContent = 'Not logged in';
       logoutButton.style.display = 'none';
       loginButton.style.display = 'inline-block';
+      profileButton.style.display = 'none'; // Hide Profile Button
     }
   }
 
@@ -1060,5 +1066,93 @@
       }
     }
   }
+
+  // Profile Modal Functionality
+
+  // Add event listener for profile button
+  document.getElementById('profile-button').addEventListener('click', openProfileModal);
+
+  // Function to open Profile Modal
+  function openProfileModal() {
+    const profileModal = document.getElementById('profile-modal');
+    profileModal.style.display = 'block';
+    profileModal.setAttribute('aria-hidden', 'false');
+    populateProfileForm();
+  }
+
+  // Function to close Profile Modal
+  function closeProfileModal() {
+    const profileModal = document.getElementById('profile-modal');
+    profileModal.style.display = 'none';
+    profileModal.setAttribute('aria-hidden', 'true');
+  }
+
+  // Add event listener to close button inside Profile Modal
+  document.getElementById('profile-modal-close').addEventListener('click', closeProfileModal);
+
+  // Function to populate Profile Form with current user data
+  function populateProfileForm() {
+    if (!userId) return;
+
+    const profileRef = database.ref(`users/${userId}/profile`);
+
+    profileRef.once('value').then(snapshot => {
+      const profileData = snapshot.val();
+      if (profileData) {
+        document.getElementById('profile-name').value = profileData.name || '';
+        // Populate additional fields here
+      } else {
+        // If no profile data exists, initialize with empty fields
+        document.getElementById('profile-form').reset();
+      }
+    }).catch(error => {
+      console.error('Error fetching profile data:', error);
+      alert('Failed to load your profile. Please try again.');
+    });
+  }
+
+  // Handle Profile Form Submission
+  document.getElementById('profile-form').addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent default form submission
+
+    const updatedName = sanitizeHTML(document.getElementById('profile-name').value.trim());
+    // Retrieve additional fields here
+
+    if (!updatedName) {
+      alert('Name cannot be empty.');
+      return;
+    }
+
+    // Prepare the data to update
+    const updatedData = {
+      name: updatedName,
+      // Add additional fields here
+    };
+
+    // Update Firebase
+    database.ref(`users/${userId}/profile`).update(updatedData)
+      .then(() => {
+        alert('Profile updated successfully!');
+        playerName = updatedName; // Update local variable
+        updateUserDisplay(); // Update display
+        closeProfileModal(); // Close the modal
+      })
+      .catch(error => {
+        console.error('Error updating profile:', error);
+        alert('Failed to update profile. Please try again.');
+      });
+  });
+
+  // Ensure modals have close buttons and event listeners
+  const modalsList = document.querySelectorAll('.modal');
+  modalsList.forEach(modal => {
+    const closeButton = modal.querySelector('.close');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => {
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+      });
+    }
+  });
 
 })();

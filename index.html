@@ -19,6 +19,9 @@
                 <span id="user-display">Not logged in</span>
                 <button id="login-button">Login</button>
                 <button id="logout-button" style="display: none;">Logout</button>
+                <!-- Add this inside the header section, next to the logout button -->
+                <button id="profile-button" style="display: none;">Profile</button>
+
             </div>
         </header>
 
@@ -87,6 +90,21 @@
             <h2 id="feedback-modal-title">Feedback</h2>
             <textarea id="feedback-text" placeholder="Enter your feedback here"></textarea>
             <button id="submit-feedback">Submit</button>
+        </div>
+    </div>
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="modal" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-labelledby="profile-modal-title">
+            <span id="profile-modal-close" class="close" aria-label="Close">&times;</span>
+            <h2 id="profile-modal-title">Your Profile</h2>
+            <form id="profile-form">
+                <label for="profile-name">Name:</label>
+                <input type="text" id="profile-name" name="profile-name" required>
+                
+                <!-- Add more fields as needed, e.g., email, preferences, etc. -->
+                
+                <button type="submit" class="modal-button">Save Changes</button>
+            </form>
         </div>
     </div>
 
