@@ -818,18 +818,6 @@
     });
   });
 
-  // Ensure modals have close buttons and event listeners
-  const modalsList = document.querySelectorAll('.modal');
-  modalsList.forEach(modal => {
-    const closeButton = modal.querySelector('.close');
-    if (closeButton) {
-      closeButton.addEventListener('click', () => {
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-      });
-    }
-  });
-
   // View leaderboard data
   function viewLeaderboard() {
     const leaderboardModal = document.getElementById('leaderboard-modal');
