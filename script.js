@@ -66,17 +66,31 @@
   async function startGame(mode) {
     console.log('Starting game in mode:', mode);
     await loadWordList();
-    
+
     if (mode === 'daily') {
       const today = new Date().toLocaleDateString('en-CA');
       const dailyAttempted = localStorage.getItem('dailyAttempted');
-      
+
       if (dailyAttempted === today) {
-        alert("You've already attempted today's word. Please try again tomorrow!");
-        return;
+        // Instead of alert, display the daily-attempt-modal
+        const dailyAttemptModal = document.getElementById('daily-attempt-modal');
+        const dailyAttemptContent = document.getElementById('daily-attempt-content');
+        dailyAttemptContent.innerHTML = `
+          <p>You've already attempted today's word. Please try again tomorrow!</p>
+          <p>The word of the day was: <strong>${targetWord.toUpperCase()}</strong></p>
+          <button id="view-today-word-button">View Today's Word</button>
+        `;
+
+        // Optionally, add an event listener to the new button
+        document.getElementById('view-today-word-button').addEventListener('click', () => {
+          // Implement functionality to view today's word or related features
+        });
+        dailyAttemptModal.style.display = 'block';
+        dailyAttemptModal.setAttribute('aria-hidden', 'false');
+        return; // Exit the function to prevent starting a new game
       }
     }
-    
+
     gameActive = true;
     currentGuess = '';
     guesses = [];
