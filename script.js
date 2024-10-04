@@ -474,16 +474,30 @@
     triggerConfetti();
   }
 
-  // Function to show the Game Over modal
+// Function to show the Game Over modal
   function showGameOverModal() {
-    const gameOverModal = document.getElementById('game-over-modal');
-    gameOverModal.style.display = 'block';
-    gameOverModal.setAttribute('aria-hidden', 'false');
+      const gameOverModal = document.getElementById('game-over-modal');
+      gameOverModal.style.display = 'block';
+      gameOverModal.setAttribute('aria-hidden', 'false');
 
-    // Display the correct word
-    const gameOverWordDisplay = document.getElementById('game-over-word-display');
-    gameOverWordDisplay.textContent = `The word was: ${targetWord.toUpperCase()}`;
+      // Display the correct word
+      const gameOverWordDisplay = document.getElementById('game-over-word-display');
+      gameOverWordDisplay.textContent = `The word was: ${targetWord.toUpperCase()}`;
+
+      // Add event listener for retry button
+      document.getElementById('retry-game-button').addEventListener('click', () => {
+          gameOverModal.style.display = 'none';
+          startGame(currentMode); // Restart the game with the current mode
+      });
   }
+
+  // Add event listener to close button inside Game Over Modal
+  document.getElementById('game-over-modal-close').addEventListener('click', () => {
+      const gameOverModal = document.getElementById('game-over-modal');
+      gameOverModal.style.display = 'none';
+      gameOverModal.setAttribute('aria-hidden', 'true');
+  });
+
 
   // Function to trigger confetti animation
   function triggerConfetti() {
@@ -1095,53 +1109,97 @@
     if (!userId) return;
 
     const profileRef = database.ref(`users/${userId}/profile`);
+    const profileForm = document.getElementById('profile-form');
+
+    // Disable the form while loading
+    profileForm.querySelectorAll('input, button').forEach(elem => elem.disabled = true);
+    // Optionally, show a loading spinner
 
     profileRef.once('value').then(snapshot => {
-      const profileData = snapshot.val();
-      if (profileData) {
-        document.getElementById('profile-name').value = profileData.name || '';
-        // Populate additional fields here
-      } else {
-        // If no profile data exists, initialize with empty fields
-        document.getElementById('profile-form').reset();
-      }
+        const profileData = snapshot.val();
+        if (profileData) {
+            document.getElementById('profile-name').value = profileData.name || '';
+            // Populate additional fields here
+        } else {
+            // If no profile data exists, initialize with empty fields
+            profileForm.reset();
+        }
     }).catch(error => {
-      console.error('Error fetching profile data:', error);
-      alert('Failed to load your profile. Please try again.');
+        console.error('Error fetching profile data:', error);
+        alert('Failed to load your profile. Please try again.');
+    }).finally(() => {
+        // Re-enable the form
+        profileForm.querySelectorAll('input, button').forEach(elem => elem.disabled = false);
+        // Hide the loading spinner
     });
-  }
+}
 
-  // Handle Profile Form Submission
-  document.getElementById('profile-form').addEventListener('submit', function(event) {
+// Function to populate Profile Form with current user data
+function populateProfileForm() {
+    if (!userId) return;
+
+    const profileRef = database.ref(`users/${userId}/profile`);
+
+    profileRef.once('value').then(snapshot => {
+        const profileData = snapshot.val();
+        if (profileData) {
+            document.getElementById('profile-name').value = profileData.name || '';
+            document.getElementById('profile-email').value = profileData.email || '';
+            // Populate additional fields here
+        } else {
+            // If no profile data exists, initialize with empty fields
+            document.getElementById('profile-form').reset();
+        }
+    }).catch(error => {
+        console.error('Error fetching profile data:', error);
+        alert('Failed to load your profile. Please try again.');
+    });
+}
+
+// Handle Profile Form Submission
+document.getElementById('profile-form').addEventListener('submit', function(event) {
     event.preventDefault(); // Prevent default form submission
 
     const updatedName = sanitizeHTML(document.getElementById('profile-name').value.trim());
+    const updatedEmail = sanitizeHTML(document.getElementById('profile-email').value.trim());
     // Retrieve additional fields here
 
-    if (!updatedName) {
-      alert('Name cannot be empty.');
-      return;
+    if (!updatedName || !updatedEmail) {
+        alert('Name and Email cannot be empty.');
+        return;
     }
 
     // Prepare the data to update
     const updatedData = {
-      name: updatedName,
-      // Add additional fields here
+        name: updatedName,
+        email: updatedEmail,
+        // Add additional fields here
     };
+
+    const saveButton = document.querySelector('#profile-form button[type="submit"]');
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving...';
 
     // Update Firebase
     database.ref(`users/${userId}/profile`).update(updatedData)
-      .then(() => {
-        alert('Profile updated successfully!');
-        playerName = updatedName; // Update local variable
-        updateUserDisplay(); // Update display
-        closeProfileModal(); // Close the modal
-      })
-      .catch(error => {
-        console.error('Error updating profile:', error);
-        alert('Failed to update profile. Please try again.');
-      });
-  });
+        .then(() => {
+            alert('Profile updated successfully!');
+            playerName = updatedName; // Update local variable
+            updateUserDisplay(); // Update display
+            closeProfileModal(); // Close the modal
+        })
+        .catch(error => {
+            console.error('Error updating profile:', error);
+            alert('Failed to update profile. Please try again.');
+        })
+        .finally(() => {
+            saveButton.disabled = false;
+            saveButton.textContent = 'Save Changes';
+        });
+});
+
+
+
 
   // Ensure modals have close buttons and event listeners
   const modalsList = document.querySelectorAll('.modal');
