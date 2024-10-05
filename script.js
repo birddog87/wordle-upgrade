@@ -230,6 +230,7 @@
         button.textContent = key;
         button.id = 'key-' + key;
         button.setAttribute('aria-label', key);
+        button.classList.add('btn'); // Inherit button styles
         button.addEventListener('click', () => handleKeyPress(key));
         rowDiv.appendChild(button);
       });
@@ -557,18 +558,20 @@
   // Share on Twitter
   document.getElementById('share-button').addEventListener('click', () => {
     const shareText = generateShareText();
-    const twitterURL = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+    const gameLink = encodeURIComponent('https://yourgameurl.com'); // Replace with your actual game URL
+    const twitterURL = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${gameLink}`;
     window.open(twitterURL, '_blank');
   });
 
   // Share on WhatsApp
   document.getElementById('share-whatsapp-button').addEventListener('click', () => {
     const shareText = generateShareText();
-    const whatsappURL = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+    const gameLink = encodeURIComponent('https://yourgameurl.com'); // Replace with your actual game URL
+    const whatsappURL = `https://api.whatsapp.com/send?text=${shareText}%20${gameLink}`;
     window.open(whatsappURL, '_blank');
   });
 
-  // Generate share text similar to Wordle, including time taken
+  // Generate share text similar to Wordle, including time taken and game link
   function generateShareText() {
     const endTime = new Date();
     const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
@@ -589,6 +592,9 @@
       }
       shareText += rowResult + '\n';
     });
+
+    // Optionally, include the game's link at the end
+    shareText += `\nPlay Wordle Upgrade here: https://yourgameurl.com`;
 
     return shareText;
   }
@@ -1096,6 +1102,9 @@
         const profileData = snapshot.val();
         if (profileData) {
             document.getElementById('profile-name').value = profileData.name || '';
+            document.getElementById('profile-email').value = profileData.email || '';
+            document.getElementById('profile-picture').value = profileData.profilePicture || '';
+            document.getElementById('profile-preferences').value = profileData.preferences || '';
             // Populate additional fields here
         } else {
             // If no profile data exists, initialize with empty fields
@@ -1116,17 +1125,23 @@
     event.preventDefault(); // Prevent default form submission
 
     const updatedName = sanitizeHTML(document.getElementById('profile-name').value.trim());
+    const updatedEmail = sanitizeHTML(document.getElementById('profile-email').value.trim());
+    const updatedProfilePicture = sanitizeHTML(document.getElementById('profile-picture').value.trim());
+    const updatedPreferences = sanitizeHTML(document.getElementById('profile-preferences').value.trim());
     // Retrieve additional fields here
 
-    if (!updatedName) {
-        alert('Name cannot be empty.');
-        return;
+    if (!updatedName || !updatedEmail) {
+      alert('Name and Email cannot be empty.');
+      return;
     }
 
     // Prepare the data to update
     const updatedData = {
-        name: updatedName,
-        // Add additional fields here
+      name: updatedName,
+      email: updatedEmail,
+      profilePicture: updatedProfilePicture,
+      preferences: updatedPreferences,
+      // Add additional fields here
     };
 
     const saveButton = document.querySelector('#profile-form button[type="submit"]');

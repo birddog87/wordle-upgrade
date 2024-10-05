@@ -19,8 +19,8 @@
                 <span id="user-display">Not logged in</span>
                 <button id="login-button">Login</button>
                 <button id="logout-button" style="display: none;">Logout</button>
-                <!-- Add this inside the header section, next to the logout button -->
-                <button id="profile-button" style="display: none;">Profile</button>
+                <button id="profile-button" class="btn" style="display: none;" aria-label="Edit Profile">Profile</button>
+
 
             </div>
         </header>
@@ -103,35 +103,41 @@
     </div>
     <!-- Profile Modal -->
     <div id="profile-modal" class="modal" aria-hidden="true">
-        <div class="modal-content" role="dialog" aria-labelledby="profile-modal-title">
-            <span id="profile-modal-close" class="close" aria-label="Close">&times;</span>
-            <h2 id="profile-modal-title">Your Profile</h2>
-            <form id="profile-form">
-                <label for="profile-name">Name:</label>
-                <input type="text" id="profile-name" name="profile-name" required>
-                
-                <label for="profile-email">Email:</label>
-                <input type="email" id="profile-email" name="profile-email" required>
-                
-                <button type="submit" class="modal-button">Save Changes</button>
-            </form>
-        </div>
+      <div class="modal-content" role="dialog" aria-labelledby="profile-modal-title">
+        <span id="profile-modal-close" class="close" aria-label="Close">&times;</span>
+        <h2 id="profile-modal-title">Your Profile</h2>
+        <form id="profile-form">
+          <label for="profile-name">Name:</label>
+          <input type="text" id="profile-name" name="profile-name" required>
+          
+          <label for="profile-email">Email:</label>
+          <input type="email" id="profile-email" name="profile-email" required>
+          
+          <label for="profile-picture">Profile Picture URL:</label>
+          <input type="url" id="profile-picture" name="profile-picture" placeholder="https://example.com/image.jpg">
+          
+          <label for="profile-preferences">Preferences:</label>
+          <textarea id="profile-preferences" name="profile-preferences" placeholder="e.g., Dark mode, notifications..."></textarea>
+          
+          <button type="submit" class="modal-button">Save Changes</button>
+        </form>
+      </div>
     </div>
 
-    <!-- Winning Modal -->
-    <div id="winning-modal" class="modal" aria-hidden="true">
+
+      <!-- Winning Modal (Assuming it's already present) -->
+      <div id="winning-modal" class="modal" aria-hidden="true">
         <div class="modal-content" role="dialog" aria-labelledby="winning-modal-title">
-            <span id="close-winning-modal" class="close" aria-label="Close">&times;</span>
-            <h2 id="winning-modal-title">Congratulations!</h2>
-            <h3 id="winning-word-display"></h3>
-            <div id="word-definition"></div>
-            <div class="share-buttons">
-                <button id="share-whatsapp-button">Share on WhatsApp</button>
-                <button id="share-button">Share on Twitter</button>
-            </div>
-            <canvas id="confetti-canvas"></canvas>
+          <span id="winning-modal-close" class="close" aria-label="Close">&times;</span>
+          <h2 id="winning-modal-title">Congratulations!</h2>
+          <h3 id="winning-word-display"></h3>
+          <div id="word-definition"></div>
+          <button id="share-button" class="modal-button">Share on Twitter</button>
+          <button id="share-whatsapp-button" class="modal-button">Share on WhatsApp</button>
+          <button id="close-winning-modal" class="modal-button">Close</button>
         </div>
-    </div>
+      </div>
+
 
     <!-- Authentication Modal -->
     <div id="auth-modal" class="modal" aria-hidden="true">
