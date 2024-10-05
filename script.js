@@ -1,5 +1,7 @@
 (function() {
-  // Initialize Firebase (Using your Firebase project's configuration)
+  // ----------------------------
+  // 1. Firebase Configuration
+  // ----------------------------
   const firebaseConfig = {
     apiKey: "AIzaSyApXW3PWhqhQ0mXeIG1oo5mdawQD29Xxjs",
     authDomain: "wordle-upgrade-c055f.firebaseapp.com",
@@ -7,13 +9,15 @@
     projectId: "wordle-upgrade-c055f",
     appId: "1:683362789332:web:e3aeb537a5f96773e85841",
   };
-  
+
   // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const database = firebase.database();
   const auth = firebase.auth();
 
-  // Variables to store game state
+  // ----------------------------
+  // 2. Game State Variables
+  // ----------------------------
   let targetWord = '';
   let currentGuess = '';
   let guesses = [];
@@ -26,13 +30,25 @@
   let currentMode = 'daily';
   let correctPositions = []; // Track correct positions for animations
 
-  // User ID for Firebase (after authentication)
+  // User ID and Admin Status
   let userId = null;
+  let isAdmin = false;
 
   // Streak Counter
   let currentStreak = 0;
 
-  // Load word list
+  // ----------------------------
+  // 3. Utility Functions
+  // ----------------------------
+
+  // Function to sanitize HTML to prevent XSS
+  function sanitizeHTML(str) {
+    const temp = document.createElement('div');
+    temp.textContent = str;
+    return temp.innerHTML;
+  }
+
+  // Function to load the word list
   async function loadWordList() {
     try {
       const response = await fetch('words_en.txt');
@@ -58,12 +74,318 @@
     console.log('Mode updated:', mode);
   }
 
-  // Event listeners for mode buttons
-  document.getElementById('daily-mode-button').addEventListener('click', () => startGame('daily'));
-  document.getElementById('random-mode-button').addEventListener('click', () => startGame('random'));
-  document.getElementById('six-letter-mode-button').addEventListener('click', () => startGame('six-letter'));
+  // Function to get a random word based on length
+  function getRandomWord(length) {
+    const filteredWords = Array.from(validWordsSet).filter(word => word.length === length);
+    return filteredWords[Math.floor(Math.random() * filteredWords.length)];
+  }
 
-  // Start the game based on mode
+  // Function to get the daily word
+  function getDailyWord() {
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const filteredWords = Array.from(validWordsSet).filter(word => word.length === 5);
+    return filteredWords[seed % filteredWords.length];
+  }
+
+  // Function to update user display based on authentication
+  function updateUserDisplay() {
+    const userDisplay = document.getElementById('user-display');
+    const loginButton = document.getElementById('login-button');
+    const logoutButton = document.getElementById('logout-button');
+    const profileButton = document.getElementById('profile-button');
+
+    if (userId) {
+      userDisplay.textContent = `Logged in as: ${playerName}`;
+      logoutButton.style.display = 'inline-block';
+      loginButton.style.display = 'none';
+      profileButton.style.display = 'inline-block';
+      if (isAdmin) {
+        document.getElementById('admin-section').style.display = 'block';
+      } else {
+        document.getElementById('admin-section').style.display = 'none';
+      }
+    } else {
+      userDisplay.textContent = 'Not logged in';
+      logoutButton.style.display = 'none';
+      loginButton.style.display = 'inline-block';
+      profileButton.style.display = 'none';
+      document.getElementById('admin-section').style.display = 'none';
+    }
+  }
+
+  // Function to display toast notifications (Optional Enhancement)
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast show';
+    setTimeout(() => {
+      toast.className = toast.className.replace('show', '');
+    }, 3000);
+  }
+
+  // ----------------------------
+  // 4. Profile Management
+  // ----------------------------
+
+  // Function to get player's name from Firebase or prompt for it
+  function getPlayerName() {
+    if (userId) {
+      database.ref(`users/${userId}/profile/name`).once('value').then(snapshot => {
+        playerName = snapshot.val() || '';
+        if (!playerName) {
+          showNameModal();
+        }
+        updateUserDisplay();
+      });
+    } else {
+      // If not authenticated, use localStorage
+      playerName = localStorage.getItem('playerName') || '';
+      if (!playerName) {
+        showNameModal();
+      }
+      updateUserDisplay();
+    }
+  }
+
+  // Function to show name entry modal
+  function showNameModal() {
+    const nameModal = document.getElementById('name-modal');
+    nameModal.style.display = 'block';
+    nameModal.setAttribute('aria-hidden', 'false');
+
+    // Automatically focus the input field when the modal opens
+    const playerNameInput = document.getElementById('player-name-input');
+    playerNameInput.focus();
+
+    document.getElementById('save-name-button').onclick = function () {
+      const nameInput = playerNameInput;
+      if (nameInput.value.trim()) {
+        playerName = sanitizeHTML(nameInput.value.trim());
+        if (userId) {
+          // Save to Firebase
+          database.ref(`users/${userId}/profile`).update({
+            name: playerName
+          });
+        } else {
+          // Save to localStorage
+          localStorage.setItem('playerName', playerName);
+        }
+        nameModal.style.display = 'none';
+        nameModal.setAttribute('aria-hidden', 'true');
+        updateUserDisplay();
+        showToast('Name updated successfully!');
+      } else {
+        alert('Please enter your name.');
+      }
+    };
+  }
+
+  // Function to open Profile Modal
+  function openProfileModal() {
+    const profileModal = document.getElementById('profile-modal');
+    profileModal.style.display = 'block';
+    profileModal.setAttribute('aria-hidden', 'false');
+    populateProfileForm();
+  }
+
+  // Function to close Profile Modal
+  function closeProfileModal() {
+    const profileModal = document.getElementById('profile-modal');
+    profileModal.style.display = 'none';
+    profileModal.setAttribute('aria-hidden', 'true');
+  }
+
+  // Function to populate Profile Form with current user data
+  function populateProfileForm() {
+    if (!userId) return;
+
+    const profileRef = database.ref(`users/${userId}/profile`);
+    const profileForm = document.getElementById('profile-form');
+
+    // Disable the form while loading
+    profileForm.querySelectorAll('input, button').forEach(elem => elem.disabled = true);
+
+    profileRef.once('value').then(snapshot => {
+      const profileData = snapshot.val();
+      if (profileData) {
+        document.getElementById('profile-name').value = profileData.name || '';
+        document.getElementById('profile-email').value = profileData.email || '';
+        // Populate additional fields here
+      } else {
+        // If no profile data exists, initialize with empty fields
+        profileForm.reset();
+      }
+    }).catch(error => {
+      console.error('Error fetching profile data:', error);
+      alert('Failed to load your profile. Please try again.');
+    }).finally(() => {
+      // Re-enable the form
+      profileForm.querySelectorAll('input, button').forEach(elem => elem.disabled = false);
+    });
+  }
+
+  // Handle Profile Form Submission
+  document.getElementById('profile-form').addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent default form submission
+
+    const updatedName = sanitizeHTML(document.getElementById('profile-name').value.trim());
+    const updatedEmail = sanitizeHTML(document.getElementById('profile-email').value.trim());
+    // Retrieve additional fields here
+
+    if (!updatedName || !updatedEmail) {
+      alert('Name and Email cannot be empty.');
+      return;
+    }
+
+    // Prepare the data to update
+    const updatedData = {
+      name: updatedName,
+      email: updatedEmail,
+      // Add additional fields here
+    };
+
+    const saveButton = document.querySelector('#profile-form button[type="submit"]');
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving...';
+
+    // Update Firebase
+    database.ref(`users/${userId}/profile`).update(updatedData)
+      .then(() => {
+        showToast('Profile updated successfully!');
+        playerName = updatedName; // Update local variable
+        updateUserDisplay(); // Update display
+        closeProfileModal(); // Close the modal
+      })
+      .catch(error => {
+        console.error('Error updating profile:', error);
+        alert('Failed to update profile. Please try again.');
+      })
+      .finally(() => {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Save Changes';
+      });
+  });
+
+  // ----------------------------
+  // 5. Game Board and Keyboard
+  // ----------------------------
+
+  // Function to create the game board
+  function createBoard() {
+    const gameBoard = document.getElementById('game-board');
+    gameBoard.innerHTML = '';
+
+    for (let i = 0; i < maxGuesses; i++) {
+      const row = document.createElement('div');
+      row.classList.add('board-row');
+      row.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
+
+      for (let j = 0; j < wordLength; j++) {
+        const tile = document.createElement('div');
+        tile.classList.add('tile');
+        tile.setAttribute('data-row', i);
+        tile.setAttribute('data-col', j);
+        row.appendChild(tile);
+      }
+      gameBoard.appendChild(row);
+    }
+
+    console.log('Game board created with', maxGuesses * wordLength, 'tiles');
+  }
+
+  // Function to create the on-screen keyboard
+  function createKeyboard() {
+    const keyboard = document.getElementById('keyboard');
+    keyboard.innerHTML = '';
+
+    const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+    rows.forEach((row, rowIndex) => {
+      const rowDiv = document.createElement('div');
+      rowDiv.classList.add('keyboard-row');
+
+      // Add Enter key on the left of the last row
+      if (rowIndex === 2) {
+        const enterButton = document.createElement('button');
+        enterButton.textContent = 'Enter';
+        enterButton.classList.add('wide-button');
+        enterButton.setAttribute('aria-label', 'Enter');
+        enterButton.addEventListener('click', () => handleKeyPress('Enter'));
+        rowDiv.appendChild(enterButton);
+      }
+
+      row.split('').forEach((key) => {
+        const button = document.createElement('button');
+        button.textContent = key;
+        button.id = 'key-' + key;
+        button.setAttribute('aria-label', key);
+        button.addEventListener('click', () => handleKeyPress(key));
+        rowDiv.appendChild(button);
+      });
+
+      // Add Backspace key on the right of the last row
+      if (rowIndex === 2) {
+        const backspaceButton = document.createElement('button');
+        backspaceButton.textContent = '←';
+        backspaceButton.classList.add('wide-button');
+        backspaceButton.setAttribute('aria-label', 'Backspace');
+        backspaceButton.addEventListener('click', () => handleKeyPress('Backspace'));
+        rowDiv.appendChild(backspaceButton);
+      }
+
+      keyboard.appendChild(rowDiv);
+    });
+  }
+
+  // Function to handle key presses
+  function handleKeyPress(key) {
+    if (!gameActive) return;
+
+    console.log('Key pressed:', key);
+
+    key = key.toLowerCase();
+
+    if (key === 'enter') {
+      if (currentGuess.length === wordLength) {
+        if (validWordsSet.has(currentGuess.toLowerCase())) {
+          submitGuess();
+        } else {
+          showInvalidGuess();
+        }
+      }
+    } else if (key === 'backspace') {
+      currentGuess = currentGuess.slice(0, -1);
+      updateBoard();
+    } else if (/^[a-z]$/.test(key)) {
+      if (currentGuess.length < wordLength) {
+        currentGuess += key;
+        updateBoard();
+      }
+    }
+  }
+
+  // Function to update the game board display
+  function updateBoard() {
+    const gameBoard = document.getElementById('game-board');
+    const currentRow = gameBoard.children[guesses.length];
+    const tiles = currentRow.querySelectorAll('.tile');
+
+    for (let i = 0; i < wordLength; i++) {
+      const tile = tiles[i];
+      tile.textContent = currentGuess[i] ? currentGuess[i].toUpperCase() : '';
+      tile.classList.remove('invalid');
+      tile.classList.remove('flip');
+      tile.classList.remove('correct', 'present', 'absent');
+    }
+
+    console.log('Board updated. Current guess:', currentGuess);
+  }
+
+  // ----------------------------
+  // 6. Game Logic
+  // ----------------------------
+
+  // Function to start the game based on mode
   async function startGame(mode) {
     console.log('Starting game in mode:', mode);
     await loadWordList();
@@ -73,7 +395,7 @@
       const dailyAttempted = localStorage.getItem('dailyAttempted');
 
       if (dailyAttempted === today) {
-        // Instead of alert, display the daily-attempt-modal
+        // Display the daily-attempt-modal
         const dailyAttemptModal = document.getElementById('daily-attempt-modal');
         const dailyAttemptContent = document.getElementById('daily-attempt-content');
         dailyAttemptContent.innerHTML = `<p>You've already attempted today's word. Please try again tomorrow!</p>`;
@@ -116,183 +438,7 @@
     updateBoard();
   }
 
-  // Function to get a random word
-  function getRandomWord(length) {
-    const filteredWords = Array.from(validWordsSet).filter(word => word.length === length);
-    return filteredWords[Math.floor(Math.random() * filteredWords.length)];
-  }
-
-  // Function to get the daily word
-  function getDailyWord() {
-    const today = new Date();
-    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-    const filteredWords = Array.from(validWordsSet).filter(word => word.length === 5);
-    return filteredWords[seed % filteredWords.length];
-  }
-
-  // Get player's name from Firebase or prompt for it
-  function getPlayerName() {
-    if (userId) {
-      database.ref(`users/${userId}/profile/name`).once('value').then(snapshot => {
-        playerName = snapshot.val() || '';
-        if (!playerName) {
-          showNameModal();
-        }
-        updateUserDisplay();
-      });
-    } else {
-      // If not authenticated, use localStorage
-      playerName = localStorage.getItem('playerName') || '';
-      if (!playerName) {
-        showNameModal();
-      }
-      updateUserDisplay();
-    }
-  }
-
-  // Show name entry modal
-  function showNameModal() {
-    const nameModal = document.getElementById('name-modal');
-    nameModal.style.display = 'block';
-    nameModal.setAttribute('aria-hidden', 'false');
-
-    // Automatically focus the input field when the modal opens
-    const playerNameInput = document.getElementById('player-name-input');
-    playerNameInput.focus();
-
-    document.getElementById('save-name-button').onclick = function () {
-      const nameInput = playerNameInput;
-      if (nameInput.value.trim()) {
-        playerName = sanitizeHTML(nameInput.value.trim());
-        if (userId) {
-          // Save to Firebase
-          database.ref(`users/${userId}/profile`).update({
-            name: playerName
-          });
-        } else {
-          // Save to localStorage
-          localStorage.setItem('playerName', playerName);
-        }
-        nameModal.style.display = 'none';
-        nameModal.setAttribute('aria-hidden', 'true');
-        updateUserDisplay();
-      } else {
-        alert('Please enter your name.');
-      }
-    };
-  }
-
-  // Create game board
-  function createBoard() {
-    const gameBoard = document.getElementById('game-board');
-    gameBoard.innerHTML = '';
-
-    for (let i = 0; i < maxGuesses; i++) {
-      const row = document.createElement('div');
-      row.classList.add('board-row');
-      row.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
-
-      for (let j = 0; j < wordLength; j++) {
-        const tile = document.createElement('div');
-        tile.classList.add('tile');
-        tile.setAttribute('data-row', i);
-        tile.setAttribute('data-col', j);
-        row.appendChild(tile);
-      }
-      gameBoard.appendChild(row);
-    }
-
-    console.log('Game board created with', maxGuesses * wordLength, 'tiles');
-  }
-
-  // Create keyboard
-  function createKeyboard() {
-    const keyboard = document.getElementById('keyboard');
-    keyboard.innerHTML = '';
-
-    const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
-    rows.forEach((row, rowIndex) => {
-      const rowDiv = document.createElement('div');
-      rowDiv.classList.add('keyboard-row');
-
-      // Add Enter key on the left of the last row
-      if (rowIndex === 2) {
-        const enterButton = document.createElement('button');
-        enterButton.textContent = 'Enter';
-        enterButton.classList.add('wide-button');
-        enterButton.setAttribute('aria-label', 'Enter');
-        enterButton.addEventListener('click', () => handleKeyPress('Enter'));
-        rowDiv.appendChild(enterButton);
-      }
-
-      row.split('').forEach((key) => {
-        const button = document.createElement('button');
-        button.textContent = key;
-        button.id = 'key-' + key;
-        button.setAttribute('aria-label', key);
-        button.classList.add('btn'); // Inherit button styles
-        button.addEventListener('click', () => handleKeyPress(key));
-        rowDiv.appendChild(button);
-      });
-
-      // Add Backspace key on the right of the last row
-      if (rowIndex === 2) {
-        const backspaceButton = document.createElement('button');
-        backspaceButton.textContent = '←';
-        backspaceButton.classList.add('wide-button');
-        backspaceButton.setAttribute('aria-label', 'Backspace');
-        backspaceButton.addEventListener('click', () => handleKeyPress('Backspace'));
-        rowDiv.appendChild(backspaceButton);
-      }
-
-      keyboard.appendChild(rowDiv);
-    });
-  }
-
-  // Handle key presses
-  function handleKeyPress(key) {
-    if (!gameActive) return;
-
-    console.log('Key pressed:', key);
-
-    key = key.toLowerCase();
-
-    if (key === 'enter') {
-      if (currentGuess.length === wordLength) {
-        if (validWordsSet.has(currentGuess.toLowerCase())) {
-          submitGuess();
-        } else {
-          showInvalidGuess();
-        }
-      }
-    } else if (key === 'backspace') {
-      currentGuess = currentGuess.slice(0, -1);
-      updateBoard();
-    } else if (/^[a-z]$/.test(key)) {
-      if (currentGuess.length < wordLength) {
-        currentGuess += key;
-        updateBoard();
-      }
-    }
-  }
-
-  // Update game board
-  function updateBoard() {
-    const gameBoard = document.getElementById('game-board');
-    const currentRow = gameBoard.children[guesses.length];
-    const tiles = currentRow.querySelectorAll('.tile');
-
-    for (let i = 0; i < wordLength; i++) {
-      const tile = tiles[i];
-      tile.textContent = currentGuess[i] ? currentGuess[i].toUpperCase() : '';
-      tile.classList.remove('invalid');
-      tile.classList.remove('flip');
-    }
-
-    console.log('Board updated. Current guess:', currentGuess);
-  }
-
-  // Submit guess and update keyboard
+  // Function to submit a guess and evaluate
   function submitGuess() {
     console.log('Submitting guess:', currentGuess);
 
@@ -301,48 +447,32 @@
     const tiles = currentRow.querySelectorAll('.tile');
     const guessArray = currentGuess.split('');
     const targetArray = targetWord.split('');
-    const matchedIndices = new Array(wordLength).fill(false);
     const animationPromises = [];
 
     // First pass: Check for correct letters in the correct position (Green)
     for (let i = 0; i < wordLength; i++) {
       if (guessArray[i] === targetArray[i]) {
-        matchedIndices[i] = true;
+        tiles[i].classList.add('correct');
+        const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
+        keyButton.classList.remove('key-absent', 'key-present');
+        keyButton.classList.add('key-correct');
       }
     }
 
     // Second pass: Check for correct letters in the wrong position (Yellow) and incorrect letters (Grey)
     for (let i = 0; i < wordLength; i++) {
-      const tile = tiles[i];
-      const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
-
-      setTimeout(() => {
-        tile.classList.add('flip');
-
-        if (guessArray[i] === targetArray[i]) {
-          tile.classList.add('correct');
-
-          // Apply water filling animation
-          if (!correctPositions[i]) {
-            tile.classList.add('correct-first-time');
-            correctPositions[i] = true;
-            // Play pop sound
-            playPopSound();
-          }
-
-          // Always set the key to 'key-correct' regardless of its current class
-          keyButton.classList.remove('key-absent', 'key-present');
-          keyButton.classList.add('key-correct');
-        } else if (targetWord.includes(guessArray[i])) {
-          tile.classList.add('present');
-          // Upgrade to 'key-present' only if it's not already 'key-correct'
+      if (guessArray[i] !== targetArray[i]) {
+        const index = targetArray.indexOf(guessArray[i]);
+        if (index !== -1 && !tiles[index].classList.contains('correct')) {
+          tiles[i].classList.add('present');
+          const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
           if (!keyButton.classList.contains('key-correct')) {
             keyButton.classList.remove('key-absent');
             keyButton.classList.add('key-present');
           }
         } else {
-          tile.classList.add('absent');
-          // Only set to 'key-absent' if it hasn't been marked before
+          tiles[i].classList.add('absent');
+          const keyButton = document.getElementById('key-' + guessArray[i].toUpperCase());
           if (
             !keyButton.classList.contains('key-correct') &&
             !keyButton.classList.contains('key-present') &&
@@ -351,6 +481,11 @@
             keyButton.classList.add('key-absent');
           }
         }
+      }
+
+      // Add flip animation
+      setTimeout(() => {
+        tiles[i].classList.add('flip');
       }, i * 500);
 
       animationPromises.push(new Promise(resolve => setTimeout(resolve, (i + 1) * 500)));
@@ -364,7 +499,6 @@
         setTimeout(() => {
           showWinningAnimation();
           logResult(true, currentMode);
-          updateAchievements();
           if (currentMode === 'daily') {
             localStorage.setItem('dailyAttempted', new Date().toLocaleDateString('en-CA'));
           }
@@ -372,10 +506,8 @@
       } else if (guesses.length === maxGuesses) {
         gameActive = false;
         setTimeout(() => {
-          // Replace alert with a Game Over Modal for consistency
           showGameOverModal();
           logResult(false, currentMode);
-          updateAchievements();
           if (currentMode === 'daily') {
             localStorage.setItem('dailyAttempted', new Date().toLocaleDateString('en-CA'));
           }
@@ -386,44 +518,13 @@
     });
   }
 
-  // Function to play pop sound
+  // Function to play pop sound (Ensure 'pop-sound.mp3' exists in your project)
   function playPopSound() {
-    const popSound = new Audio('pop-sound.mp3'); // Ensure you have this audio file
+    const popSound = new Audio('pop-sound.mp3');
     popSound.play();
   }
 
-  // Function to log the result to Firebase
-  function logResult(won, mode) {
-    const endTime = new Date();
-    const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
-    const today = new Date().toLocaleDateString('en-CA'); // e.g., "2024-09-25"
-
-    const log = {
-      player: playerName,
-      time: endTime.toLocaleString(),
-      date: today, // Add date to the log
-      timeTaken: timeTaken,
-      attempts: guesses.length,
-      word: targetWord.toUpperCase(),
-      won: won,
-    };
-
-    if (userId) {
-      // Save the log to Firebase under the appropriate mode and date
-      database.ref(`leaderboard/${mode}/${today}/${Date.now()}`).set(log)
-        .catch(error => {
-          console.error('Error writing to leaderboard:', error);
-          alert('Unable to log your game result. Please try again later.');
-        });
-
-      // Update user statistics
-      updateUserStats(won, guesses.length);
-    } else {
-      alert('Please log in to save your game results.');
-    }
-  }
-
-  // Show invalid guess animation
+  // Function to show invalid guess animation
   function showInvalidGuess() {
     const gameBoard = document.getElementById('game-board');
     const currentRow = gameBoard.children[guesses.length];
@@ -440,7 +541,7 @@
     }, 500);
   }
 
-  // Function to show the winning animation and modal
+  // Function to show winning animation and modal
   function showWinningAnimation() {
     const winningModal = document.getElementById('winning-modal');
     winningModal.style.display = 'block';
@@ -487,20 +588,16 @@
     gameOverWordDisplay.textContent = `The word was: ${targetWord.toUpperCase()}`;
 
     // Add event listener for retry button
+    const retryButton = document.getElementById('retry-game-button');
+    // Remove existing listeners to prevent multiple triggers
+    retryButton.replaceWith(retryButton.cloneNode(true));
     document.getElementById('retry-game-button').addEventListener('click', () => {
       gameOverModal.style.display = 'none';
       startGame(currentMode); // Restart the game with the current mode
     });
   }
 
-  // Add event listener to close button inside Game Over Modal
-  document.getElementById('game-over-modal-close').addEventListener('click', () => {
-    const gameOverModal = document.getElementById('game-over-modal');
-    gameOverModal.style.display = 'none';
-    gameOverModal.setAttribute('aria-hidden', 'true');
-  });
-
-  // Function to trigger confetti animation
+  // Function to trigger confetti animation (Ensure confetti library is included)
   function triggerConfetti() {
     const confettiCanvas = document.getElementById('confetti-canvas');
     const myConfetti = confetti.create(confettiCanvas, { resize: true, useWorker: true });
@@ -529,7 +626,7 @@
     })();
   }
 
-  // Fetch word definition from dictionary API
+  // Function to fetch word definition from dictionary API
   async function fetchWordDefinition(word) {
     try {
       const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
@@ -555,23 +652,27 @@
     }
   }
 
+  // ----------------------------
+  // 7. Share Functionality
+  // ----------------------------
+
   // Share on Twitter
   document.getElementById('share-button').addEventListener('click', () => {
     const shareText = generateShareText();
-    const gameLink = encodeURIComponent('https://yourgameurl.com'); // Replace with your actual game URL
-    const twitterURL = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${gameLink}`;
+    const gameURL = 'https://birddog87.github.io/wordle-upgrade/'; // Replace with your actual game URL
+    const twitterURL = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(gameURL)}`;
     window.open(twitterURL, '_blank');
   });
 
   // Share on WhatsApp
   document.getElementById('share-whatsapp-button').addEventListener('click', () => {
     const shareText = generateShareText();
-    const gameLink = encodeURIComponent('https://yourgameurl.com'); // Replace with your actual game URL
-    const whatsappURL = `https://api.whatsapp.com/send?text=${shareText}%20${gameLink}`;
+    const gameURL = 'https://birddog87.github.io/wordle-upgrade/'; // Replace with your actual game URL
+    const whatsappURL = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + gameURL)}`;
     window.open(whatsappURL, '_blank');
   });
 
-  // Generate share text similar to Wordle, including time taken and game link
+  // Generate share text similar to Wordle, including time taken and game URL
   function generateShareText() {
     const endTime = new Date();
     const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
@@ -593,13 +694,14 @@
       shareText += rowResult + '\n';
     });
 
-    // Optionally, include the game's link at the end
-    shareText += `\nPlay Wordle Upgrade here: https://yourgameurl.com`;
-
     return shareText;
   }
 
-  // Statistics Tracking
+  // ----------------------------
+  // 8. Statistics Tracking
+  // ----------------------------
+
+  // Function to update user statistics
   function updateUserStats(won, attempts) {
     if (!userId) return; // Only track stats for authenticated users
 
@@ -635,7 +737,7 @@
     });
   }
 
-  // Display Statistics Chart
+  // Function to display user statistics (Assuming you have a canvas with id 'stats-chart')
   function displayStatistics() {
     if (!userId) return;
 
@@ -673,80 +775,227 @@
     });
   }
 
-  // Function to sanitize HTML to prevent XSS
-  function sanitizeHTML(str) {
-    const temp = document.createElement('div');
-    temp.textContent = str;
-    return temp.innerHTML;
-  }
+  // ----------------------------
+  // 9. Leaderboard Viewing and Admin Deletion
+  // ----------------------------
 
-  // Handle Physical Keyboard Input
-  document.addEventListener('keydown', (event) => {
-    // Check if modals are open and skip if any modal is open
-    const modals = document.querySelectorAll('.modal');
-    let isAnyModalOpen = false;
+  // Function to view leaderboard data
+  function viewLeaderboard() {
+    const leaderboardModal = document.getElementById('leaderboard-modal');
+    leaderboardModal.style.display = 'block';
+    leaderboardModal.setAttribute('aria-hidden', 'false');
 
-    modals.forEach((modal) => {
-      if (modal.style.display === 'block') {
-        isAnyModalOpen = true;
-      }
+    const tabs = document.querySelectorAll('.tablink');
+    const tabContents = document.querySelectorAll('.tabcontent');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', (event) => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        tabContents.forEach(content => content.classList.remove('active'));
+        const activeContent = document.getElementById(tab.getAttribute('data-tab'));
+        activeContent.classList.add('active');
+
+        // Fetch leaderboard data for the active tab
+        const mode = tab.getAttribute('data-tab').replace('leaderboard-', '');
+        fetchLeaderboardData(mode, activeContent);
+      });
     });
 
-    if (isAnyModalOpen) return;
+    // Fetch and display leaderboard data for the active tab
+    const activeTab = document.querySelector('.tablink.active').getAttribute('data-tab');
+    const mode = activeTab.replace('leaderboard-', '');
+    const container = document.getElementById(activeTab);
+    fetchLeaderboardData(mode, container);
+  }
 
-    const key = event.key;
+  // Function to fetch leaderboard data
+  function fetchLeaderboardData(mode, container) {
+    const selectedDate = document.getElementById('leaderboard-date').value;
+    database.ref(`leaderboard/${mode}`).once('value')
+      .then(snapshot => {
+        const data = snapshot.val();
+        const leaderboardHTML = displayLeaderboard(data, mode, selectedDate);
+        container.innerHTML = leaderboardHTML;
+      })
+      .catch(error => {
+        console.error('Error fetching leaderboard data:', error);
+        container.innerHTML = '<p>Error loading leaderboard. Please try again later.</p>';
+      });
+  }
 
-    // Only allow a single character or Backspace/Enter
-    if (key === 'Backspace' || key === 'Enter' || /^[a-zA-Z]$/.test(key)) {
-      handleKeyPress(key.toLowerCase());
+  // Function to display leaderboard data
+  function displayLeaderboard(data, mode, selectedDate) {
+    if (!data) {
+      return `<p>No leaderboard data available for ${mode} mode.</p>`;
     }
-  });
 
-  // Update user display
-  function updateUserDisplay() {
-    const userDisplay = document.getElementById('user-display');
-    const loginButton = document.getElementById('login-button');
-    const logoutButton = document.getElementById('logout-button');
-    const profileButton = document.getElementById('profile-button'); // Get Profile Button
+    const allEntries = [];
 
-    if (userId) {
-      userDisplay.textContent = 'Logged in as: ' + playerName;
-      logoutButton.style.display = 'inline-block';
-      loginButton.style.display = 'none';
-      profileButton.style.display = 'inline-block'; // Show Profile Button
+    // Function to recursively extract entries
+    function extractEntries(obj) {
+      Object.keys(obj).forEach(key => {
+        const value = obj[key];
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          if (value.player) {
+            // Filter by selected date if provided
+            if (selectedDate) {
+              const entryDate = value.date || '';
+              if (entryDate === selectedDate) {
+                allEntries.push({ ...value, key });
+              }
+            } else {
+              allEntries.push({ ...value, key });
+            }
+          } else {
+            extractEntries(value);
+          }
+        }
+      });
+    }
+
+    extractEntries(data);
+
+    if (allEntries.length === 0) {
+      return `<p>No leaderboard data available for ${mode} mode on the selected date.</p>`;
+    }
+
+    // Sort the entries
+    allEntries.sort((a, b) => {
+      if (a.won !== b.won) return b.won - a.won; // Sort by wins first
+      if (a.attempts !== b.attempts) return a.attempts - b.attempts; // Then by attempts
+      return a.timeTaken - b.timeTaken; // Finally by time taken
+    });
+
+    let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Date</th><th>Time (s)</th><th>Attempts</th>';
+    if (isAdmin) {
+      leaderboardHTML += '<th>Action</th>';
+    }
+    leaderboardHTML += '</tr>';
+
+    const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+
+    allEntries.slice(0, 10).forEach((entry, index) => {
+      const date = new Date(entry.time);
+      const formattedDate = date.toLocaleDateString('en-US', dateOptions);
+
+      leaderboardHTML += `<tr>
+        <td data-label="Rank">${index + 1}</td>
+        <td data-label="Player">${sanitizeHTML(entry.player)}</td>
+        <td data-label="Date">${formattedDate}</td>
+        <td data-label="Time (s)">${entry.timeTaken}</td>
+        <td data-label="Attempts">${entry.attempts}</td>`;
+      if (isAdmin) {
+        leaderboardHTML += `<td data-label="Action"><button class="delete-button" data-key="${entry.key}">Delete</button></td>`;
+      }
+      leaderboardHTML += `</tr>`;
+    });
+
+    leaderboardHTML += '</table>';
+
+    // If admin, attach delete event listeners
+    if (isAdmin) {
+      const deleteButtons = container.querySelectorAll('.delete-button');
+      deleteButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const recordKey = button.getAttribute('data-key');
+          if (confirm('Are you sure you want to delete this record?')) {
+            deleteLeaderboardRecord(mode, recordKey);
+          }
+        });
+      });
+    }
+
+    return leaderboardHTML;
+  }
+
+  // Function to delete a leaderboard record (Admin Only)
+  function deleteLeaderboardRecord(mode, key) {
+    database.ref(`leaderboard/${mode}/${key}`).remove()
+      .then(() => {
+        showToast('Record deleted successfully.');
+        // Refresh the leaderboard
+        viewLeaderboard();
+      })
+      .catch(error => {
+        console.error('Error deleting record:', error);
+        alert('Failed to delete record. Please try again.');
+      });
+  }
+
+  // ----------------------------
+  // 10. Feedback Functionality
+  // ----------------------------
+
+  // Function to handle feedback submission
+  function submitFeedback() {
+    const feedbackText = document.getElementById('feedback-text').value.trim();
+    if (feedbackText) {
+      const feedbackRef = database.ref('feedback');
+      feedbackRef.push({
+        user: userId ? playerName : 'Anonymous',
+        feedback: feedbackText,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      }).then(() => {
+        showToast('Thank you for your feedback!');
+        document.getElementById('feedback-modal').style.display = 'none';
+        document.getElementById('feedback-text').value = '';
+      }).catch(error => {
+        console.error('Error submitting feedback:', error);
+        alert('There was an error submitting your feedback. Please try again.');
+      });
     } else {
-      userDisplay.textContent = 'Not logged in';
-      logoutButton.style.display = 'none';
-      loginButton.style.display = 'inline-block';
-      profileButton.style.display = 'none'; // Hide Profile Button
+      alert('Please enter your feedback before submitting.');
     }
   }
 
-  // Authentication Logic
+  // ----------------------------
+  // 11. Authentication Logic
+  // ----------------------------
+
   const authModalElement = document.getElementById('auth-modal');
   const emailAuthModalElement = document.getElementById('email-auth-modal');
+  const adminAuthModalElement = document.getElementById('admin-auth-modal'); // New Admin Auth Modal
 
   // Open Authentication Modal on Page Load if Not Authenticated
   auth.onAuthStateChanged((user) => {
     if (user) {
       userId = user.uid;
       playerName = user.displayName || user.email;
-      localStorage.setItem('playerName', playerName);
-      authModalElement.style.display = 'none';
-      emailAuthModalElement.style.display = 'none';
-      displayStatistics();
-      updateUserDisplay();
+      // Check if user is admin
+      database.ref(`users/${userId}/profile/role`).once('value').then(snapshot => {
+        isAdmin = snapshot.val() === 'admin';
+        updateUserDisplay();
+        if (isAdmin) {
+          showAdminSection();
+        }
+      });
     } else {
       userId = null;
       playerName = '';
+      isAdmin = false;
       updateUserDisplay();
     }
   });
+
+  // Function to show admin section
+  function showAdminSection() {
+    document.getElementById('admin-section').style.display = 'block';
+  }
 
   // Login Button Event Listener
   document.getElementById('login-button').addEventListener('click', () => {
     authModalElement.style.display = 'block';
     authModalElement.setAttribute('aria-hidden', 'false');
+  });
+
+  // Admin Login Button (Assuming there's a separate button for admin login)
+  document.getElementById('admin-login-button').addEventListener('click', () => {
+    authModalElement.style.display = 'none';
+    authModalElement.setAttribute('aria-hidden', 'true');
+    adminAuthModalElement.style.display = 'block';
+    adminAuthModalElement.setAttribute('aria-hidden', 'false');
   });
 
   // Email Sign-In Button
@@ -809,364 +1058,62 @@
     }
   });
 
+  // Admin Login Submit (Assuming admin uses email/password)
+  document.getElementById('admin-signin-submit-button').addEventListener('click', () => {
+    const adminEmail = document.getElementById('admin-email').value.trim();
+    const adminPassword = document.getElementById('admin-password').value.trim();
+    if (adminEmail && adminPassword) {
+      auth.signInWithEmailAndPassword(adminEmail, adminPassword)
+        .then(() => {
+          // Success: Close the admin auth modal
+          adminAuthModalElement.style.display = 'none';
+          adminAuthModalElement.setAttribute('aria-hidden', 'true');
+          authModalElement.style.display = 'none';
+          authModalElement.setAttribute('aria-hidden', 'true');
+        })
+        .catch(error => {
+          console.error('Admin Sign-In Error:', error);
+          alert('Error signing in as admin. Please check your credentials.');
+        });
+    } else {
+      alert('Please enter both email and password.');
+    }
+  });
+
   // Logout functionality
   document.getElementById('logout-button').addEventListener('click', () => {
     auth.signOut().then(() => {
       console.log('User signed out');
       userId = null;
       playerName = '';
+      isAdmin = false;
       localStorage.removeItem('playerName');
       updateUserDisplay();
+      showToast('Logged out successfully.');
       // Optionally, restart the game
       startGame('daily');
     }).catch((error) => {
       console.error('Error signing out:', error);
+      alert('Error signing out. Please try again.');
     });
   });
 
-  // View leaderboard data
-  function viewLeaderboard() {
-    const leaderboardModal = document.getElementById('leaderboard-modal');
-    leaderboardModal.style.display = 'block';
-    leaderboardModal.setAttribute('aria-hidden', 'false');
+  // ----------------------------
+  // 12. Leaderboard Modal Close
+  // ----------------------------
 
-    const tabs = document.querySelectorAll('.tablink');
-    const tabContents = document.querySelectorAll('.tabcontent');
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', (event) => {
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-
-        tabContents.forEach(content => content.classList.remove('active'));
-        const activeContent = document.getElementById(tab.getAttribute('data-tab'));
-        activeContent.classList.add('active');
-
-        // Fetch leaderboard data for the active tab
-        const mode = tab.getAttribute('data-tab').replace('leaderboard-', '');
-        fetchLeaderboardData(mode, activeContent);
-      });
-    });
-
-    // Fetch and display leaderboard data for the active tab
-    const activeTab = document.querySelector('.tablink.active').getAttribute('data-tab');
-    const mode = activeTab.replace('leaderboard-', '');
-    const container = document.getElementById(activeTab);
-    fetchLeaderboardData(mode, container);
-  }
-
-  // Fetch leaderboard data
-  function fetchLeaderboardData(mode, container) {
-    const selectedDate = document.getElementById('leaderboard-date').value;
-    database.ref(`leaderboard/${mode}`).once('value')
-      .then(snapshot => {
-        const data = snapshot.val();
-        const leaderboardHTML = displayLeaderboard(data, mode, selectedDate);
-        container.innerHTML = leaderboardHTML;
-      })
-      .catch(error => {
-        console.error('Error fetching leaderboard data:', error);
-        container.innerHTML = '<p>Error loading leaderboard. Please try again later.</p>';
-      });
-  }
-
-  // Display leaderboard
-  function displayLeaderboard(data, mode, selectedDate) {
-    if (!data) {
-      return `<p>No leaderboard data available for ${mode} mode.</p>`;
-    }
-
-    const allEntries = [];
-
-    // Function to recursively extract entries
-    function extractEntries(obj, path = '') {
-      Object.keys(obj).forEach(key => {
-        const value = obj[key];
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
-          if (value.player) {
-            // Filter by selected date if provided
-            if (selectedDate) {
-              const entryDate = value.date || '';
-              if (entryDate === selectedDate) {
-                allEntries.push(value);
-              }
-            } else {
-              allEntries.push(value);
-            }
-          } else {
-            extractEntries(value, path + '/' + key);
-          }
-        }
-      });
-    }
-
-    extractEntries(data);
-
-    if (allEntries.length === 0) {
-      return `<p>No leaderboard data available for ${mode} mode on the selected date.</p>`;
-    }
-
-    // Sort the entries
-    allEntries.sort((a, b) => {
-      if (a.won !== b.won) return b.won - a.won; // Sort by wins first
-      if (a.attempts !== b.attempts) return a.attempts - b.attempts; // Then by attempts
-      return a.timeTaken - b.timeTaken; // Finally by time taken
-    });
-
-    let leaderboardHTML = '<table><tr><th>Rank</th><th>Player</th><th>Date</th><th>Time (s)</th><th>Attempts</th></tr>';
-
-    const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-
-    allEntries.slice(0, 10).forEach((entry, index) => {
-      const date = new Date(entry.time);
-      const formattedDate = date.toLocaleDateString('en-US', dateOptions);
-
-      leaderboardHTML += `<tr>
-        <td data-label="Rank">${index + 1}</td>
-        <td data-label="Player">${sanitizeHTML(entry.player)}</td>
-        <td data-label="Date">${formattedDate}</td>
-        <td data-label="Time (s)">${entry.timeTaken}</td>
-        <td data-label="Attempts">${entry.attempts}</td>
-      </tr>`;
-    });
-
-    leaderboardHTML += '</table>';
-    return leaderboardHTML;
-  }
-
-  // Add event listener for date input
-  document.getElementById('leaderboard-date').addEventListener('change', () => {
-    const activeTab = document.querySelector('.tablink.active').getAttribute('data-tab');
-    const mode = activeTab.replace('leaderboard-', '');
-    const container = document.getElementById(activeTab);
-    fetchLeaderboardData(mode, container);
-  });
-
-  // Add event listener for view leaderboard button
-  document.getElementById('view-leaderboard').addEventListener('click', viewLeaderboard);
-
-  // Initialize the game on page load
-  window.addEventListener('load', () => {
-    console.log('Page loaded, initializing game');
-    startGame('daily');
-  });
-
-  // Define updateAchievements function
-  function updateAchievements() {
-    if (!userId) return;
-
-    const achievementsRef = database.ref(`users/${userId}/achievements`);
-    const statsRef = database.ref(`users/${userId}/stats`);
-
-    Promise.all([achievementsRef.once('value'), statsRef.once('value')])
-      .then(([achievementsSnapshot, statsSnapshot]) => {
-        const achievements = achievementsSnapshot.val() || {};
-        const stats = statsSnapshot.val() || {};
-
-        // Check for new achievements
-        if (stats.gamesWon >= 1 && !achievements.firstWin) {
-          achievements.firstWin = true;
-        }
-        if (stats.gamesWon >= 10 && !achievements.tenWins) {
-          achievements.tenWins = true;
-        }
-        if (stats.currentStreak >= 5 && !achievements.fiveStreak) {
-          achievements.fiveStreak = true;
-        }
-        if (stats.maxStreak >= 10 && !achievements.tenStreak) {
-          achievements.tenStreak = true;
-        }
-
-        // Update achievements in Firebase
-        achievementsRef.set(achievements);
-
-        // Display new achievements
-        displayAchievements(achievements);
-      })
-      .catch(error => {
-        console.error('Error updating achievements:', error);
-      });
-  }
-
-  // Function to display achievements
-  function displayAchievements(achievements) {
-    const achievementsList = document.getElementById('achievements-list');
-    achievementsList.innerHTML = '';
-
-    const achievementItems = [
-      { key: 'firstWin', name: 'First Win', description: 'Win your first game' },
-      { key: 'tenWins', name: 'Decathlon', description: 'Win 10 games' },
-      { key: 'fiveStreak', name: 'Hot Streak', description: 'Achieve a 5-game winning streak' },
-      { key: 'tenStreak', name: 'Unstoppable', description: 'Achieve a 10-game winning streak' }
-    ];
-
-    achievementItems.forEach(item => {
-      const li = document.createElement('li');
-      li.className = 'achievement';
-      if (achievements[item.key]) {
-        li.innerHTML = `<img src="images/${item.key}.png" alt="${item.name}"> <span>${item.name}: ${item.description}</span>`;
-      } else {
-        li.innerHTML = `<img src="images/locked.png" alt="Locked"> <span>${item.name}: Locked</span>`;
+  // Function to close any open modal when clicking outside
+  window.onclick = function(event) {
+    const modals = document.getElementsByClassName('modal');
+    for (let i = 0; i < modals.length; i++) {
+      if (event.target == modals[i]) {
+        modals[i].style.display = "none";
+        modals[i].setAttribute('aria-hidden', 'true');
       }
-      achievementsList.appendChild(li);
-    });
-
-    // Show achievements modal
-    const achievementsModal = document.getElementById('achievements-modal');
-    achievementsModal.style.display = 'block';
-    achievementsModal.setAttribute('aria-hidden', 'false');
-  }
-
-  // Add event listener for view achievements button
-  document.getElementById('view-achievements').addEventListener('click', () => {
-    if (userId) {
-      const achievementsRef = database.ref(`users/${userId}/achievements`);
-      achievementsRef.once('value')
-        .then(snapshot => {
-          const achievements = snapshot.val() || {};
-          displayAchievements(achievements);
-        })
-        .catch(error => {
-          console.error('Error fetching achievements:', error);
-        });
-    } else {
-      alert('Please log in to view your achievements.');
-    }
-  });
-
-  // Function to handle feedback submission
-  function submitFeedback() {
-    const feedbackText = document.getElementById('feedback-text').value.trim();
-    if (feedbackText) {
-      const feedbackRef = database.ref('feedback');
-      feedbackRef.push({
-        user: userId ? playerName : 'Anonymous',
-        feedback: feedbackText,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      }).then(() => {
-        alert('Thank you for your feedback!');
-        document.getElementById('feedback-modal').style.display = 'none';
-        document.getElementById('feedback-text').value = '';
-      }).catch(error => {
-        console.error('Error submitting feedback:', error);
-        alert('There was an error submitting your feedback. Please try again.');
-      });
-    } else {
-      alert('Please enter your feedback before submitting.');
     }
   }
 
-  // Add event listener for feedback submission
-  document.getElementById('submit-feedback').addEventListener('click', submitFeedback);
-
-  // Add event listener for opening feedback modal
-  document.getElementById('open-feedback').addEventListener('click', () => {
-    document.getElementById('feedback-modal').style.display = 'block';
-  });
-
-  // Profile Modal Functionality
-
-  // Add event listener for profile button
-  document.getElementById('profile-button').addEventListener('click', openProfileModal);
-
-  // Function to open Profile Modal
-  function openProfileModal() {
-    const profileModal = document.getElementById('profile-modal');
-    profileModal.style.display = 'block';
-    profileModal.setAttribute('aria-hidden', 'false');
-    populateProfileForm();
-  }
-
-  // Function to close Profile Modal
-  function closeProfileModal() {
-    const profileModal = document.getElementById('profile-modal');
-    profileModal.style.display = 'none';
-    profileModal.setAttribute('aria-hidden', 'true');
-  }
-
-  // Add event listener to close button inside Profile Modal
-  document.getElementById('profile-modal-close').addEventListener('click', closeProfileModal);
-
-  // Function to populate Profile Form with current user data
-  function populateProfileForm() {
-    if (!userId) return;
-
-    const profileRef = database.ref(`users/${userId}/profile`);
-    const profileForm = document.getElementById('profile-form');
-
-    // Disable the form while loading
-    profileForm.querySelectorAll('input, button').forEach(elem => elem.disabled = true);
-    // Optionally, show a loading spinner
-
-    profileRef.once('value').then(snapshot => {
-        const profileData = snapshot.val();
-        if (profileData) {
-            document.getElementById('profile-name').value = profileData.name || '';
-            document.getElementById('profile-email').value = profileData.email || '';
-            document.getElementById('profile-picture').value = profileData.profilePicture || '';
-            document.getElementById('profile-preferences').value = profileData.preferences || '';
-            // Populate additional fields here
-        } else {
-            // If no profile data exists, initialize with empty fields
-            profileForm.reset();
-        }
-    }).catch(error => {
-        console.error('Error fetching profile data:', error);
-        alert('Failed to load your profile. Please try again.');
-    }).finally(() => {
-        // Re-enable the form
-        profileForm.querySelectorAll('input, button').forEach(elem => elem.disabled = false);
-        // Hide the loading spinner
-    });
-  }
-
-  // Handle Profile Form Submission
-  document.getElementById('profile-form').addEventListener('submit', function(event) {
-    event.preventDefault(); // Prevent default form submission
-
-    const updatedName = sanitizeHTML(document.getElementById('profile-name').value.trim());
-    const updatedEmail = sanitizeHTML(document.getElementById('profile-email').value.trim());
-    const updatedProfilePicture = sanitizeHTML(document.getElementById('profile-picture').value.trim());
-    const updatedPreferences = sanitizeHTML(document.getElementById('profile-preferences').value.trim());
-    // Retrieve additional fields here
-
-    if (!updatedName || !updatedEmail) {
-      alert('Name and Email cannot be empty.');
-      return;
-    }
-
-    // Prepare the data to update
-    const updatedData = {
-      name: updatedName,
-      email: updatedEmail,
-      profilePicture: updatedProfilePicture,
-      preferences: updatedPreferences,
-      // Add additional fields here
-    };
-
-    const saveButton = document.querySelector('#profile-form button[type="submit"]');
-    saveButton.disabled = true;
-    saveButton.textContent = 'Saving...';
-
-    // Update Firebase
-    database.ref(`users/${userId}/profile`).update(updatedData)
-        .then(() => {
-            alert('Profile updated successfully!');
-            playerName = updatedName; // Update local variable
-            updateUserDisplay(); // Update display
-            closeProfileModal(); // Close the modal
-        })
-        .catch(error => {
-            console.error('Error updating profile:', error);
-            alert('Failed to update profile. Please try again.');
-        })
-        .finally(() => {
-            saveButton.disabled = false;
-            saveButton.textContent = 'Save Changes';
-        });
-  });
-
-  // Ensure modals have close buttons and event listeners (Single Declaration)
+  // Add event listeners to close buttons in modals
   const modalsList = document.querySelectorAll('.modal');
   modalsList.forEach(modal => {
     const closeButton = modal.querySelector('.close');
@@ -1177,5 +1124,69 @@
       });
     }
   });
+
+  // ----------------------------
+  // 13. Admin Section Functionality
+  // ----------------------------
+
+  // Admin can view and delete leaderboard records
+  // Assuming 'admin-section' is a div in your HTML dedicated to admin functionalities
+
+  // Function to refresh admin leaderboard (optional, if you have a separate admin leaderboard)
+  function refreshAdminLeaderboard() {
+    // Implement if you have a separate admin leaderboard view
+  }
+
+  // ----------------------------
+  // 14. Initialize the Game on Page Load
+  // ----------------------------
+  window.addEventListener('load', () => {
+    console.log('Page loaded, initializing game');
+    startGame('daily');
+  });
+
+  // ----------------------------
+  // 15. Logging Game Results to Firebase
+  // ----------------------------
+
+  // Function to log the result to Firebase
+  function logResult(won, mode) {
+    const endTime = new Date();
+    const timeTaken = Math.floor((endTime - startTime) / 1000); // in seconds
+    const today = new Date().toLocaleDateString('en-CA'); // e.g., "2024-09-25"
+
+    const log = {
+      player: playerName,
+      time: endTime.toISOString(),
+      date: today, // Add date to the log
+      timeTaken: timeTaken,
+      attempts: guesses.length,
+      word: targetWord.toUpperCase(),
+      won: won,
+    };
+
+    if (userId) {
+      // Save the log to Firebase under the appropriate mode and date
+      const newLogRef = database.ref(`leaderboard/${mode}/${today}`).push();
+      newLogRef.set(log)
+        .then(() => {
+          console.log('Game result logged successfully.');
+          // Update user statistics if not already done
+        })
+        .catch(error => {
+          console.error('Error writing to leaderboard:', error);
+          alert('Unable to log your game result. Please try again later.');
+        });
+    } else {
+      alert('Please log in to save your game results.');
+    }
+  }
+
+  // ----------------------------
+  // 16. Leaderboard and Admin Actions
+  // ----------------------------
+
+  // Assuming that the admin section has buttons or UI elements to manage the leaderboard
+  // All functionalities related to achievements have been removed as per the requirement
 
 })();
