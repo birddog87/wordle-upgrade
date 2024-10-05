@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wordle Upgrade</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <!-- Chart.js for Statistics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Canvas Confetti for Winning Animation -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </head>
 <body>
@@ -17,11 +20,11 @@
             <h1>Wordle Upgrade</h1>
             <div class="user-display-container">
                 <span id="user-display">Not logged in</span>
-                <button id="login-button">Login</button>
-                <button id="logout-button" style="display: none;">Logout</button>
+                <button id="login-button" class="btn">Login</button>
+                <button id="logout-button" class="btn" style="display: none;">Logout</button>
                 <button id="profile-button" class="btn" style="display: none;" aria-label="Edit Profile">Profile</button>
-
-
+                <!-- Admin Login Button -->
+                <button id="admin-login-button" class="btn" style="display: none;">Admin Login</button>
             </div>
         </header>
 
@@ -32,7 +35,6 @@
             <button id="random-mode-button">Random Word</button>
             <button id="six-letter-mode-button">6-Letter Word</button>
             <button id="view-leaderboard">View Leaderboard</button>
-            <button id="view-achievements">View Achievements</button>
             <button id="open-feedback">Feedback</button>
         </div>
 
@@ -47,13 +49,16 @@
         </main>
     </div>
 
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
     <!-- Name Modal -->
     <div id="name-modal" class="modal" aria-hidden="true">
         <div class="modal-content" role="dialog" aria-labelledby="name-modal-title">
             <span id="name-modal-close" class="close" aria-label="Close">&times;</span>
             <h2 id="name-modal-title">Enter Your Name</h2>
             <input type="text" id="player-name-input" placeholder="Player Name">
-            <button id="save-name-button">Save</button>
+            <button id="save-name-button" class="modal-button">Save</button>
         </div>
     </div>
 
@@ -73,15 +78,16 @@
             <div id="leaderboard-six-letter" class="tabcontent"></div>
         </div>
     </div>
+
     <!-- Game Over Modal -->
-      <div id="game-over-modal" class="modal" aria-hidden="true">
-          <div class="modal-content" role="dialog" aria-labelledby="game-over-modal-title">
-              <span id="game-over-modal-close" class="close" aria-label="Close">&times;</span>
-              <h2 id="game-over-modal-title">Game Over!</h2>
-              <h3 id="game-over-word-display"></h3>
-              <button id="retry-game-button" class="modal-button">Play Again</button>
-          </div>
-      </div>
+    <div id="game-over-modal" class="modal" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-labelledby="game-over-modal-title">
+            <span id="game-over-modal-close" class="close" aria-label="Close">&times;</span>
+            <h2 id="game-over-modal-title">Game Over!</h2>
+            <h3 id="game-over-word-display"></h3>
+            <button id="retry-game-button" class="modal-button">Play Again</button>
+        </div>
+    </div>
 
     <!-- Daily Attempt Modal -->
     <div id="daily-attempt-modal" class="modal" aria-hidden="true">
@@ -98,54 +104,54 @@
             <span id="feedback-modal-close" class="close" aria-label="Close">&times;</span>
             <h2 id="feedback-modal-title">Feedback</h2>
             <textarea id="feedback-text" placeholder="Enter your feedback here"></textarea>
-            <button id="submit-feedback">Submit</button>
+            <button id="submit-feedback" class="modal-button">Submit</button>
         </div>
     </div>
+
     <!-- Profile Modal -->
     <div id="profile-modal" class="modal" aria-hidden="true">
-      <div class="modal-content" role="dialog" aria-labelledby="profile-modal-title">
-        <span id="profile-modal-close" class="close" aria-label="Close">&times;</span>
-        <h2 id="profile-modal-title">Your Profile</h2>
-        <form id="profile-form">
-          <label for="profile-name">Name:</label>
-          <input type="text" id="profile-name" name="profile-name" required>
-          
-          <label for="profile-email">Email:</label>
-          <input type="email" id="profile-email" name="profile-email" required>
-          
-          <label for="profile-picture">Profile Picture URL:</label>
-          <input type="url" id="profile-picture" name="profile-picture" placeholder="https://example.com/image.jpg">
-          
-          <label for="profile-preferences">Preferences:</label>
-          <textarea id="profile-preferences" name="profile-preferences" placeholder="e.g., Dark mode, notifications..."></textarea>
-          
-          <button type="submit" class="modal-button">Save Changes</button>
-        </form>
-      </div>
+        <div class="modal-content" role="dialog" aria-labelledby="profile-modal-title">
+            <span id="profile-modal-close" class="close" aria-label="Close">&times;</span>
+            <h2 id="profile-modal-title">Your Profile</h2>
+            <form id="profile-form">
+                <label for="profile-name">Name:</label>
+                <input type="text" id="profile-name" name="profile-name" required>
+                
+                <label for="profile-email">Email:</label>
+                <input type="email" id="profile-email" name="profile-email" required>
+                
+                <label for="profile-picture">Profile Picture URL:</label>
+                <input type="url" id="profile-picture" name="profile-picture" placeholder="https://example.com/image.jpg">
+                
+                <label for="profile-preferences">Preferences:</label>
+                <textarea id="profile-preferences" name="profile-preferences" placeholder="e.g., Dark mode, notifications..."></textarea>
+                
+                <button type="submit" class="modal-button">Save Changes</button>
+            </form>
+        </div>
     </div>
 
-
-      <!-- Winning Modal (Assuming it's already present) -->
-      <div id="winning-modal" class="modal" aria-hidden="true">
+    <!-- Winning Modal -->
+    <div id="winning-modal" class="modal" aria-hidden="true">
         <div class="modal-content" role="dialog" aria-labelledby="winning-modal-title">
-          <span id="winning-modal-close" class="close" aria-label="Close">&times;</span>
-          <h2 id="winning-modal-title">Congratulations!</h2>
-          <h3 id="winning-word-display"></h3>
-          <div id="word-definition"></div>
-          <button id="share-button" class="modal-button">Share on Twitter</button>
-          <button id="share-whatsapp-button" class="modal-button">Share on WhatsApp</button>
-          <button id="close-winning-modal" class="modal-button">Close</button>
+            <span id="winning-modal-close" class="close" aria-label="Close">&times;</span>
+            <h2 id="winning-modal-title">Congratulations!</h2>
+            <h3 id="winning-word-display"></h3>
+            <div id="word-definition"></div>
+            <button id="share-button" class="modal-button">Share on Twitter</button>
+            <button id="share-whatsapp-button" class="modal-button">Share on WhatsApp</button>
+            <button id="close-winning-modal" class="modal-button">Close</button>
         </div>
-      </div>
-
+    </div>
 
     <!-- Authentication Modal -->
     <div id="auth-modal" class="modal" aria-hidden="true">
         <div class="modal-content" role="dialog" aria-labelledby="auth-modal-title">
             <span id="auth-modal-close" class="close" aria-label="Close">&times;</span>
             <h2 id="auth-modal-title">Login / Sign Up</h2>
-            <button id="email-signin-button">Sign in with Email</button>
-            <button id="email-signup-button">Sign up with Email</button>
+            <button id="email-signin-button" class="modal-button">Sign in with Email</button>
+            <button id="email-signup-button" class="modal-button">Sign up with Email</button>
+            <button id="admin-login-button" class="btn" style="display: none;">Admin Login</button>
         </div>
     </div>
 
@@ -156,18 +162,28 @@
             <h2 id="email-auth-modal-title">Email Authentication</h2>
             <input type="email" id="user-email" placeholder="Email">
             <input type="password" id="user-password" placeholder="Password">
-            <button id="email-signin-submit-button">Sign In</button>
-            <button id="email-signup-submit-button">Sign Up</button>
+            <button id="email-signin-submit-button" class="modal-button">Sign In</button>
+            <button id="email-signup-submit-button" class="modal-button">Sign Up</button>
         </div>
     </div>
 
-    <!-- Achievements Modal -->
-    <div id="achievements-modal" class="modal" aria-hidden="true">
-        <div class="modal-content" role="dialog" aria-labelledby="achievements-modal-title">
-            <span id="achievements-modal-close" class="close" aria-label="Close">&times;</span>
-            <h2 id="achievements-modal-title">Achievements</h2>
-            <ul id="achievements-list"></ul>
+    <!-- Admin Authentication Modal -->
+    <div id="admin-auth-modal" class="modal" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-labelledby="admin-auth-modal-title">
+            <span id="admin-auth-modal-close" class="close" aria-label="Close">&times;</span>
+            <h2 id="admin-auth-modal-title">Admin Login</h2>
+            <input type="email" id="admin-email" placeholder="Admin Email">
+            <input type="password" id="admin-password" placeholder="Password">
+            <button id="admin-signin-submit-button" class="modal-button">Admin Sign In</button>
         </div>
+    </div>
+
+    <!-- Admin Section -->
+    <div id="admin-section" style="display: none; padding: 20px;">
+        <h2>Admin Dashboard</h2>
+        <p>Manage Leaderboard Records Below:</p>
+        <!-- Leaderboard records will be displayed here with delete options -->
+        <!-- This section is managed by script.js and does not require additional HTML -->
     </div>
 
     <script src="script.js"></script>
